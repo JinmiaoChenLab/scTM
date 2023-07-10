@@ -1,0 +1,75 @@
+site_name: scTM
+site_description: The documentation for the scTM software library.
+site_url: http://www.google.com
+repo_url: http://www.google.com
+repo_name: scTM
+
+edit_uri: ""
+
+nav:
+  - 🏡 Home: index.md
+  - Getting started:
+      - 🛠️ Installation: installation.md
+      - Notebook page: example.ipynb
+  # - 💡 Background:
+  #   - Intro to Topquic Models: examples/intro_to_topicmodel.py
+  - 📕 Reference: api/
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top # Show a back to top button
+    - content.code.copy
+    - search.suggest # Show search suggestions
+    - search.highlight # Highlight search results in results
+    - content.code.annotate # Allow individual lines of code to be annotated
+  icon:
+    repo: fontawesome/brands/github
+  logo: _static/favicon.ico
+  favicon: _static/favicon.ico
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details # Enhance admonitions with collapse/expand
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.snippets:
+      check_paths: true
+  - pymdownx.tabbed
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+        - docs/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - mkdocs-jupyter:
+      execute: false
+      allow_errors: false
+  #   # binder: true
+  #   # binder_service_name: "gh"
+  # #     binder_branch: "main"
+  - mkdocstrings:
+      watch:
+        - sctm
+      default_handler: python
+      handlers:
+        python:
+          rendering:
+            # show_root_heading: true
+            # show_root_full_path: true
+            # show_if_no_docstring: true
+            # show_signature_annotations: true
+            show_source: false
+            members_order: source # order methods according to their order of definition in the source code, not alphabetical order
+            heading_level: 4
+          options:
+            inherited_members: true # Allow looking up inherited methods
+            docstring_style: "google"
