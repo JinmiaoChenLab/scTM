@@ -32,7 +32,7 @@ def get_topic_enrichr(beta, geneset, topics="all", organism="human", topn_genes=
     return enrichr
 
 
-def get_topic_ora(beta, geneset, topics="all", topn_genes=20, n_jobs = 20):
+def get_topic_ora(beta, geneset, topics="all", topn_genes=20, n_jobs=20):
 
     if topics == "all":
         topics = beta.columns
@@ -52,9 +52,9 @@ def get_topic_ora(beta, geneset, topics="all", topn_genes=20, n_jobs = 20):
     )
     i = 0
     for topic in topics:
-        oras[topic] = ora[i].res2d.sort_values("P-value", inplace = False)
-        i = i + 1 
-        
+        oras[topic] = ora[i].res2d.sort_values("P-value", inplace=False)
+        i = i + 1
+
     return oras
 
     # for topic in topics:
@@ -89,13 +89,13 @@ def get_topic_disco(beta, topics="all", reference=None, topn_genes=20, ncores=20
         df = df.sort_values("fc", ascending=False)
         df = df.iloc[:topn_genes, :]
         df = df[["gene"]]
-        return dt.CELLiD_enrichment(df, ncores=1, reference= reference)
+        return dt.CELLiD_enrichment(df, ncores=1, reference=reference)
 
     disco = Parallel(n_jobs=ncores)(
         delayed(process_topic)(beta, topic, reference) for topic in topics
     )
 
-    discos = {} 
+    discos = {}
     for i in range(len(topics)):
         discos[topics[i]] = disco[i]
 
@@ -137,19 +137,19 @@ def get_topic_gsea(
             verbose=True,
         )
         return results.res2d
-    
+
     gsea = Parallel(n_jobs=n_jobs)(
         delayed(process_topic)(beta, topic, geneset) for topic in topics
-    )    
-        # results["Name"] = geneset
+    )
+    # results["Name"] = geneset
 
-        # if topic not in gsea.keys():
-        #     gsea[topic] = results
-    
-    gseas = {} 
+    # if topic not in gsea.keys():
+    #     gsea[topic] = results
+
+    gseas = {}
     for i in range(len(topics)):
         gseas[topics[i]] = gsea[i]
-         
+
     return gseas
 
 

@@ -4,11 +4,9 @@ from torch_sparse import SparseTensor, matmul
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from scipy.sparse import issparse
 
+
 def check_layer(adata, layer):
-
-
-
-    if layer == None:
+    if layer is None:
         if issparse(adata.X):
             data = adata.X.toarray()
         else:
@@ -20,20 +18,19 @@ def check_layer(adata, layer):
             data = adata.layers[layer]
     return data.astype("float32")
 
+
 def get_init_bg(data):
-
-
     # Compute the log background frequency of all words
     # sums = np.sum(data, axis=0)+1
     data = data.copy()
-    data = data / data.sum(axis = 1, keepdims = True)
+    data = data / data.sum(axis=1, keepdims=True)
     means = np.mean(data, axis=0)
     print("Computing background frequencies")
     return np.log(means + 1e-8)
 
+
 def precompute_SGC(data, n_layers, add_self_loops=True):
     # Why is this inplace?
-
 
     edge_weight = data.edge_weight
     num_nodes = data.num_nodes

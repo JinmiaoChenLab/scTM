@@ -15,7 +15,7 @@ class RandomIndexSampler(torch.utils.data.Sampler):
     def get_node_indices(self):
         n_ids = torch.randperm(self.N)
         n_ids = list(torch.split(n_ids, self.batch_size))
-        
+
         return n_ids
 
     def __iter__(self):
@@ -26,7 +26,7 @@ class RandomIndexSampler(torch.utils.data.Sampler):
     def __len__(self):
         return self.batch_size
 
- 
+
 class RandomNodeSampler(torch.utils.data.DataLoader):
     r"""A data loader that randomly samples nodes within a graph and returns
     their induced subgraph.
@@ -68,7 +68,7 @@ class RandomNodeSampler(torch.utils.data.DataLoader):
             batch_size=1,
             sampler=RandomIndexSampler(self.N, batch_size, shuffle),
             collate_fn=self.__collate__,
-            **kwargs
+            **kwargs,
         )
 
     def __getitem__(self, idx):

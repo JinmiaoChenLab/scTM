@@ -1,5 +1,4 @@
 """Main module."""
-import os
 import random
 
 import matplotlib
@@ -13,13 +12,12 @@ import torch
 
 # from .data import choose_dataloader
 import torch.nn.functional as F
-import torch_geometric.transforms as T
-from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO, RenyiELBO
+from pyro.infer import SVI, TraceMeanField_ELBO
 from pyro.optim import AdamW
 from torch.utils.data import DataLoader
 from torch_geometric.data import Data
 from torch_geometric.utils import from_scipy_sparse_matrix
-from torch_sparse import SparseTensor, matmul
+from torch_sparse import SparseTensor
 from torchinfo import summary
 from tqdm import tqdm
 
@@ -46,21 +44,27 @@ class STAMP:
         enc_distribution="mvn",
         beta=1,
     ):
-        
+
         """_summary_
 
         Args:
             adata (_type_): AnnData  object
             n_topics (int, optional): Number of topics to model. Defaults to 10.
             n_layers (int, optional): _description_. Defaults to 1.
-            hidden_size (int, optional):  Number of nodes in the hidden layer of the encoder.. Defaults to 50.
-            layer (_type_, optional): Layer where the counts data are stored. Defaults to None.
+            hidden_size (int, optional):  Number of nodes in the hidden layer of the
+                encoder. Defaults to 50.
+            layer (_type_, optional): Layer where the counts data are stored. Defaults
+                to None.
             dropout (float, optional): Dropout used for the encoder. Defaults to 0.0.
-            batch_key (_type_, optional): Location of batch in obs where the batch information is stored. Defaults to None.
-            batch_mode (str, optional): How to model the batch effects. Defaults to "batch".
-            verbose (bool, optional): Print out information on the model. Defaults to True.
+            batch_key (_type_, optional): Location of batch in obs where the batch
+                information is stored. Defaults to None.
+            batch_mode (str, optional): How to model the batch effects. Defaults to
+                "batch".
+            verbose (bool, optional): Print out information on the model. Defaults to
+                True.
             batch_size (int, optional): Batch size. Defaults to 1024.
-            enc_distribution (str, optional): Encoder distribution. Chocies are multivariate normal. Defaults to "mvn".
+            enc_distribution (str, optional): Encoder distribution. Choices are
+                multivariate normal. Defaults to "mvn".
             beta (float, optional): Beta as in Beta-VAE. Defaults to 0.1.
         """
         pyro.clear_param_store()
@@ -79,7 +83,7 @@ class STAMP:
         self.batch_size = batch_size
         self.enc_distribution = enc_distribution
 
-        if batch_key == None:
+        if batch_key is None:
             bg = get_init_bg(check_layer(adata, layer))
             bg_init = torch.from_numpy(bg)
         else:
@@ -136,7 +140,7 @@ class STAMP:
             + scipy.sparse.identity(n=x_numpy.shape[0])
         )[0]
 
-        if batch_key != None:
+        if batch_key is not None:
             self.batch_series = adata.obs[batch_key].astype("category")
             self.n_batches = self.batch_series.nunique()
             batch_factorize, _ = pd.factorize(self.batch_series)
@@ -174,12 +178,18 @@ class STAMP:
         """Training the data
 
         Args:
-            max_epochs (int, optional): Maximum number of epochs to run. Defaults to 2000.
-            learning_rate (float, optional): Learning rate of AdamW optimizer. Defaults to 0.01.
-            device (str, optional): Which device to run model on. Use "cpu" to run on cpu and cuda to run on gpu. Defaults to "cuda:0".
-            weight_decay (float, optional): Weight decay of AdamW optimizer. Defaults to 0.01.
-            early_stop (bool, optional): Whether to early stop when training plateau. Defaults to True.
-            patience (int, optional): How many epochs to stop training when training plateau. Defaults to 20.
+            max_epochs (int, optional): Maximum number of epochs to run.
+                Defaults to 2000.
+            learning_rate (float, optional): Learning rate of AdamW optimizer.
+                Defaults to 0.01.
+            device (str, optional): Which device to run model on. Use "cpu"
+                to run on cpu and cuda to run on gpu. Defaults to "cuda:0".
+            weight_decay (float, optional): Weight decay of AdamW optimizer.
+                 Defaults to 0.01.
+            early_stop (bool, optional): Whether to early stop when training plateau.
+                 Defaults to True.
+            patience (int, optional): How many epochs to stop training when
+                training plateau. Defaults to 20.
         """
 
         # adam_args = {"lr":learning_rate, "weight_decay":weight_decay, "clip_norm": 1}
@@ -217,7 +227,7 @@ class STAMP:
                     # self.model.fixed_point_updates()
                 else:
                     batch_loss = svi.step(batch.x, batch.sgc_x, batch.st_batch)
-                    # self.model.fixed_point_updates()  
+                    # self.model.fixed_point_updates()
 
                 # tau.require_grad_ = False
                 # tau = tau.detach()
@@ -249,9 +259,12 @@ class STAMP:
         """Get metrics
 
         Args:
-            topk (int, optional): Number of top genes to use to score the metrics. Defaults to 10.
-            layer (_type_, optional): Which layer to use to score the metrics. If none is chosen, use X. Defaults to None.
-            TGC (bool, optional): Whether to calculate the topic gene correlation. Defaults to True.
+            topk (int, optional): Number of top genes to use to score the metrics.
+                 Defaults to 10.
+            layer (_type_, optional): Which layer to use to score the metrics.
+                 If none is chosen, use X. Defaults to None.
+            TGC (bool, optional): Whether to calculate the topic gene correlation.
+                 Defaults to True.
 
         Returns:
             _type_: _description_
@@ -389,7 +402,7 @@ class STAMP:
         self.model.to(device)
         self.data.to(device)
 
-        if gene == None:
+        if gene is None:
             gene = self.adata.var_names
         gene_index = np.where(self.adata.var_names == gene)[0]
 
@@ -398,7 +411,7 @@ class STAMP:
         x_plot = x_plot[obs, :]
         x_plot = x_plot / x_plot.sum(axis=1, keepdims=True)
 
-        if self.batch_key == None:
+        if self.batch_key is None:
             w = self.get_feature_by_topic(return_softmax=True)
             z = self.get_cell_by_topic()
             w = w.to_numpy()
@@ -418,7 +431,6 @@ class STAMP:
             mean = z @ w.transpose()
             # if n_obs > x.shape[0]:
         #     n_obs = x.shape[0]
-        # mean = pd.DataFrame(mean, columns = self.adata.var_names, index = self.adata.obs_names)
         x_plot = x_plot[:, gene_index].ravel()
         y_plot = mean[:, gene_index].ravel()
 

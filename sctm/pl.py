@@ -23,25 +23,13 @@ from scanpy.pl._tools.scatterplots import (
     _check_na_color,
 )
 from typing import (
-    Collection,
     Union,
     Optional,
-    Sequence,
-    Any,
-    Mapping,
     List,
     Tuple,
 )
-from collections.abc import Iterable
 from scanpy.pl._utils import (
-    _IGraphLayout,
-    _FontWeight,
-    _FontSize,
     ColorLike,
-    VBound,
-    circles,
-    check_projection,
-    check_colornorm,
 )
 
 
@@ -49,7 +37,7 @@ def heatmap_topic(adata, groupby=None, topics=None, figsize=(10, 5), cmap=None):
 
     topic_prop = adata.obs.copy()
 
-    if topics == None:
+    if topics is None:
         topics = topic_prop.columns[topic_prop.columns.str.startswith("Topic")]
         topic_prop = topic_prop.loc[:, topics]
     else:
@@ -73,7 +61,7 @@ def heatmap(
 
     topic_prop = adata.obs.copy()
 
-    if topics == None:
+    if topics is None:
         topics = topic_prop.columns[topic_prop.columns.str.startswith("Topic")]
         topic_prop = topic_prop.loc[:, topics]
     else:
@@ -107,7 +95,7 @@ def matrixplot(
 
     topic_prop = adata.obs.copy()
 
-    if topics == None:
+    if topics is None:
         topics = topic_prop.columns[topic_prop.columns.str.startswith("Topic")]
         topic_prop = topic_prop.loc[:, topics]
     else:
@@ -140,7 +128,7 @@ def tracksplot(
 
     topic_prop = adata.obs.copy()
 
-    if topics == None:
+    if topics is None:
         topics = topic_prop.columns[topic_prop.columns.str.startswith("Topic")]
         topic_prop = topic_prop.loc[:, topics]
     else:
@@ -164,14 +152,14 @@ def clustermap(
     beta,
     gene_dict=None,
     topn_genes=20,
-    xticklabels = 'auto',
-    yticklabels = 'auto',
+    xticklabels="auto",
+    yticklabels="auto",
     figsize=(10, 6),
     cmap="viridis",
     fontsize=5,
-    row_cluster =False,
-    col_cluster =True,
-    standard_scale = 0,
+    row_cluster=False,
+    col_cluster=True,
+    standard_scale=0,
     transpose=False,
     return_fig=False,
 ):
@@ -190,19 +178,24 @@ def clustermap(
 
     if transpose:
         beta_sub = beta_sub.transpose()
-    
-    fig = sns.clustermap(beta_sub, cmap=cmap, figsize=figsize, row_cluster = row_cluster, 
-        col_cluster=col_cluster, standard_scale=standard_scale, xticklabels = xticklabels, 
-        yticklabels =yticklabels)
+
+    fig = sns.clustermap(
+        beta_sub,
+        cmap=cmap,
+        figsize=figsize,
+        row_cluster=row_cluster,
+        col_cluster=col_cluster,
+        standard_scale=standard_scale,
+        xticklabels=xticklabels,
+        yticklabels=yticklabels,
+    )
 
     fig.fig.subplots_adjust(right=0.7)
     fig.ax_cbar.set_position((0.8, 0.4, 0.01, 0.3))
 
-
     fig.ax_heatmap.set_yticklabels(
-        fig.ax_heatmap.get_ymajorticklabels(), fontsize=fontsize, rotation = 0
+        fig.ax_heatmap.get_ymajorticklabels(), fontsize=fontsize, rotation=0
     )
-
 
     # fig.ax_row_dendrogram.set_visible(False) #suppress row dendrogram
     # fig.ax_col_dendrogram.set_visible(False) #suppress column dendrogram
@@ -210,21 +203,6 @@ def clustermap(
     if return_fig:
         fig = fig.fig
         return fig
-
-
-def upsetplot(beta, topn_genes=20, figsize=(10, 5), return_fig=False):
-
-    fig = plt.figure(figsize=figsize)
-    n_topics = beta.shape[1]
-    topics_dict = {}
-    for i in reversed(range(1, n_topics + 1)):
-        topics_dict[f"Topic{i}"] = beta.nlargest(topn_genes, f"Topic{i}").index.tolist()
-    topics = from_contents(topics_dict)
-    plot(topics, subset_size="count", sort_by="cardinality", fig=fig)
-    if return_fig:
-        return topics, fig
-    else:
-        return topics
 
 
 def heatmap_topic_correlation(
@@ -238,7 +216,7 @@ def heatmap_topic_correlation(
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    if spatial_connectivities == None:
+    if spatial_connectivities is None:
         corr = topic_prop.corr()
         sns.heatmap(
             corr,
@@ -577,7 +555,7 @@ def spatialpie(
     else:
         cmap_img = None
 
-    if scale_factor != None:
+    if scale_factor is not None:
         circle_radius = size * scale_factor * spot_size * 0.5
     else:
         circle_radius = spot_size * 0.5
@@ -651,7 +629,7 @@ def spatialpie(
     if not frameon:
         ax.axis("off")
 
-    if title != None:
+    if title is not None:
         ax.set_title(title)
 
     if show is False or return_fig is True:

@@ -53,7 +53,7 @@ def get_topic_coherence(
     data = pd.DataFrame(data, index=adata.obs_names, columns=adata.var_names)
     quantiles = np.quantile(data, q=quantile, axis=0)
     quantiles_df = pd.DataFrame(quantiles, index=adata.var_names, columns=["quantiles"])
-    
+
     TC = []
     topics = [beta.nlargest(topk, i).index.tolist() for i in beta.columns]
     for beta_topk in topics:
