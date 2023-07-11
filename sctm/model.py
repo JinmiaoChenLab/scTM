@@ -623,6 +623,7 @@ class spatialLDAModel(nn.Module):
         return prior_loc, prior_scale
 
     def save(self, path):
+        
         torch.save(self.model.state_dict(), path)
 
     def feature_by_topic(self, return_scale, return_softmax=True):
