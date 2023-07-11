@@ -27,7 +27,6 @@ class RandomIndexSampler(torch.utils.data.Sampler):
         return iter(self.n_ids)
 
     def __len__(self):
-        
         return self.batch_size
 
  
