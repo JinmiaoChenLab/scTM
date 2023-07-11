@@ -142,16 +142,16 @@ class MLPEncoderMVN(nn.Module):
 
 class BatchEncoder(nn.Module):
     def __init__(self, n_genes, n_layers, n_batches):
-        super().__init__() 
+        super().__init__()
 
-        if n_batches  == 1:
+        if n_batches == 1:
             n_batches = 0
-        
-        self.bn_pp = nn.BatchNorm1d(n_genes * (n_layers + 1) + n_batches, affine = False)
+
+        self.bn_pp = nn.BatchNorm1d(n_genes * (n_layers + 1) + n_batches, affine=False)
         self.linear1 = nn.Linear(n_genes * (n_layers + 1) + n_batches, 1)
         self.linear2 = nn.Linear(n_genes * (n_layers + 1) + n_batches, 1)
         self.reset_parameters()
-        
+
     def forward(self, x):
         x = torch.log(x + 1)
         # x = self.bn_pp(x)
@@ -160,8 +160,8 @@ class BatchEncoder(nn.Module):
         # mu = self.linear1(x)
         sigma = self.linear2(x)
         # sigma = self.bn1(sigma)
-        sigma = F.softplus(sigma)#(mu - mu.mean())/mu.std()
-        return (mu - mu.mean())/mu.std(), sigma
+        sigma = F.softplus(sigma)  # (mu - mu.mean())/mu.std()
+        return (mu - mu.mean()) / mu.std(), sigma
 
     def reset_parameters(self):
         # nn.init.xavier_uniform_(self.linear.weight)
@@ -359,13 +359,13 @@ class spatialLDAModel(nn.Module):
 
         with pyro.plate("batch", batch_size):
             # with poutine.scale(scale=self.beta):
-                # bs = pyro.sample(
-                #     "bs",
-                #     dist.Cauchy(
-                #         x.new_zeros((batch_size, 1)),
-                #         x.new_ones((batch_size, 1)) * bs_aux,
-                #     ).to_event(1),
-                # )
+            # bs = pyro.sample(
+            #     "bs",
+            #     dist.Cauchy(
+            #         x.new_zeros((batch_size, 1)),
+            #         x.new_ones((batch_size, 1)) * bs_aux,
+            #     ).to_event(1),
+            # )
             if self.enc_distribution == "mvn":
                 z_topic_loc = x.new_zeros((batch_size, self.n_topics))
                 z_topic_scale = x.new_ones((batch_size, self.n_topics))
@@ -404,12 +404,7 @@ class spatialLDAModel(nn.Module):
                     mean = torch.matmul(
                         z, torch.exp(F.log_softmax(w + self.init_bg + gsf, dim=1))
                     )
-                    # mean = F.softmax(mean, dim = 1)
-                    # sf_scale = (ys * ys_add).sum(axis=1, keepdims=True)
-                    # mean = mean / (1 + sf_scale)
-                    # mean = torch.exp(F.log_softmax(torch.log(mean) + gsf, dim = 1))
-                # mean = torch.exp(F.log_softmax(torch.log(mean) + torch.log10(ls) @ gsf, dim = 1))
-                # mean = torch.exp(F.log_softmax(z @ (w + self.init_bg + ys_scale), dim = 1))
+                    
             else:
                 with poutine.scale(scale=self.beta):
                     z_topic = pyro.sample(
@@ -473,7 +468,6 @@ class spatialLDAModel(nn.Module):
             )
             gsf_aux_scale = torch.sqrt(torch.exp(gsf_aux_scale))
             gsf_aux = pyro.sample("gsf_aux", dist.LogNormal(gsf_aux_loc, gsf_aux_scale))
-
 
         with pyro.plate("genes", self.n_genes):
             with poutine.scale(scale=batch_size / self.num_nodes):
@@ -591,7 +585,6 @@ class spatialLDAModel(nn.Module):
                 w = pyro.sample("w", dist.Normal(w_loc, w_scale).to_event(1))
 
         with pyro.plate("batch", batch_size):
-
             if self.enc_distribution == "mvn":
                 if self.n_batches > 1:
                     new_x = torch.cat([sgc_x, ys], dim=1)
@@ -623,7 +616,6 @@ class spatialLDAModel(nn.Module):
         return prior_loc, prior_scale
 
     def save(self, path):
-        
         torch.save(self.model.state_dict(), path)
 
     def feature_by_topic(self, return_scale, return_softmax=True):

@@ -15,10 +15,7 @@ class RandomIndexSampler(torch.utils.data.Sampler):
     def get_node_indices(self):
         n_ids = torch.randperm(self.N)
         n_ids = list(torch.split(n_ids, self.batch_size))
-        # n_id = torch.randint(self.batch_size, (self.N,), dtype=torch.long)
-        # n_ids = [
-        #     (n_id == i).nonzero(as_tuple=False).view(-1) for i in range(self.batch_size)
-        # ]
+        
         return n_ids
 
     def __iter__(self):

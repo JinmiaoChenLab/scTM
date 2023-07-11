@@ -1,14 +1,12 @@
-from itertools import combinations
 import numpy as np
-import squidpy as sq
 import itertools
 from scipy.sparse import issparse
 import pandas as pd
-from scipy.stats import spearmanr, pearsonr
+from scipy.stats import spearmanr
 
 
 def check_layer(adata, layer):
-    if layer == None:
+    if layer is None:
         if issparse(adata.X):
             data = adata.X.toarray()
         else:
