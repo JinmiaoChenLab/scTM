@@ -15,6 +15,15 @@ jobs:
         with:
           python-version: 3.x
       - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
+      - uses: pdm-project/setup-pdm@v3
+        name: Setup PDM
+        with:
+          python-version: 3.9              # Version range or exact version of a Python version to use, the same as actions/setup-python
+          architecture: x64                # The target architecture (x86, x64) of the Python interpreter. the same as actions/setup-python
+          prerelease: false                # Allow prerelease versions of PDM to be installed
+          enable-pep582: false             # Enable PEP 582 package loading globally
+          allow-python-prereleases: false  # Allow prerelease versions of Python to be installed. For example if only 3.12-dev is available, 3.12 will fallback to 3.12-dev
+
       - uses: actions/cache@v3
         with:
           key: mkdocs-material-${{ env.cache_id }}
