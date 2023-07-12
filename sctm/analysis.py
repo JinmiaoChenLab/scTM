@@ -117,7 +117,7 @@ def get_topic_gsea(
         topics = [topics]
     for topic in topics:
         if topic not in beta.columns:
-            raise KeyError(f"{topic} not Found")
+            raise KeyError(f"{topic} not found")
 
     gsea = {}
     # library = blitz.enrichr.get_library(genesets)
