@@ -41,4 +41,4 @@ jobs:
             mkdocs-material-
       # - run: pdm install
       # - run: pip install mkdocs-material
-      - run: mkdocs gh-deploy --force
+      - run: pdm run mkdocs gh-deploy --force
