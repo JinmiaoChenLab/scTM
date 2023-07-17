@@ -3,7 +3,7 @@ import numpy as np
 from .utils import check_layer
 
 
-def filter_genes(adata, min_cutoff=0.01, max_cutoff=1, expression_cutoff_99q=1):
+def filter_genes(adata, min_cutoff=0.01, max_cutoff=1, expression_cutoff_99q=0):
 
     n_obs = adata.shape[0]
     min_cells = round(n_obs * min_cutoff)

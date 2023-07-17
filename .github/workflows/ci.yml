@@ -11,26 +11,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: 3.x
-      - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
       - uses: pdm-project/setup-pdm@v3
         name: Setup PDM
         with:
           python-version: 3.9              # Version range or exact version of a Python version to use, the same as actions/setup-python
           architecture: x64                # The target architecture (x86, x64) of the Python interpreter. the same as actions/setup-python
+          # version: 2.7.4                   # The version of PDM to install. Leave it as empty to use the latest version from PyPI, or 'head' to use the latest version from GitHub
           prerelease: false                # Allow prerelease versions of PDM to be installed
           enable-pep582: false             # Enable PEP 582 package loading globally
           allow-python-prereleases: false  # Allow prerelease versions of Python to be installed. For example if only 3.12-dev is available, 3.12 will fallback to 3.12-dev
+      - name: Install dependencies
+        run: pdm install                   # Then you can use pdm in the following steps.
 
+      # - uses: actions/setup-python@v4
+        # with:
+        #   python-version: 3.x
+      - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
       - uses: actions/cache@v3
         with:
           key: mkdocs-material-${{ env.cache_id }}
           path: .cache
           restore-keys: |
             mkdocs-material-
-      - run: pip install mkdocs-material
-      - run: pip install mkdocs-gen-files
-      - run: pip install mkdocs-literate-nav
+      - run: pdm install
+      # - run: pip install mkdocs-material
       - run: mkdocs gh-deploy --force

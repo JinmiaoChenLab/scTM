@@ -606,13 +606,6 @@ class spatialLDAModel(nn.Module):
 
             return z_loc
 
-    def get_prior(self, obs):
-        prior_loc, prior_scale = self.prior_encoder(obs)
-        return prior_loc, prior_scale
-
-    def save(self, path):
-        torch.save(self.model.state_dict(), path)
-
     def feature_by_topic(self, return_scale, return_softmax=True):
         if return_scale:
             return pyro.param("w_loc").t(), pyro.param("w_scale").t()
@@ -629,16 +622,6 @@ class spatialLDAModel(nn.Module):
 
     def get_bias(self):
         return self.init_bg
-
-    def save(self, path):
-        mod = pyro.module("stamp", self)
-        torch.save(mod.state_dict(), path)
-        print("saved!")
-
-    def load(self, path):
-        mod = pyro.module("stamp", self)
-        mod.load_state_dict(torch.load(path))
-        print("loaded!")
 
     def model_params(self):
         return pyro.module("stamp", self)
