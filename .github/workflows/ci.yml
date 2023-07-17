@@ -33,6 +33,6 @@ jobs:
           path: .cache
           restore-keys: |
             mkdocs-material-
-      - run: pdm install
+      # - run: pdm install
       # - run: pip install mkdocs-material
       - run: mkdocs gh-deploy --force

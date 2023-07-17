@@ -1,26 +1,24 @@
 ==========
-spatialLDA
+scTM
 ==========
 
 
-.. image:: https://img.shields.io/pypi/v/spatiallda.svg
-        :target: https://pypi.python.org/pypi/spatiallda
+.. image:: https://img.shields.io/pypi/v/sctm.svg
+        :target: https://pypi.python.org/pypi/sctm
 
-.. image:: https://img.shields.io/travis/chengwei94/spatiallda.svg
-        :target: https://travis-ci.com/chengwei94/spatiallda
 
-.. image:: https://readthedocs.org/projects/spatiallda/badge/?version=latest
-        :target: https://spatiallda.readthedocs.io/en/latest/?version=latest
+.. image:: https://readthedocs.org/projects/sctm/badge/?version=latest
+        :target: https://sctm.readthedocs.io/en/latest/?version=latest
         :alt: Documentation Status
 
 
 
+scTM is a package for spatial transcriptomics for single cell that uses topic modelling, solved with stochastic variational infernce.
 
-spatialLDA is a graph extension of prodLDA for identifying spatial regions in spatial transcriptomics
-
+Currently available modules: STAMP
 
 * Free software: MIT license
-* Documentation: https://spatiallda.readthedocs.io.
+* Documentation: https://sctm.readthedocs.io.
 
 
 Features
