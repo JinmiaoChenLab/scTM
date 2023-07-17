@@ -31,7 +31,6 @@ def get_init_bg(data):
 
 def precompute_SGC(data, n_layers, add_self_loops=True):
     # Why is this inplace?
-
     edge_weight = data.edge_weight
     num_nodes = data.num_nodes
     assert data.edge_index is not None

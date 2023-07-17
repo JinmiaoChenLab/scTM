@@ -1,8 +1,5 @@
 """Main module."""
-import random
 
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pyro
@@ -315,6 +312,14 @@ class STAMP:
         self.model.eval()
 
     def get_cell_by_topic(self, device="cpu"):
+        """Get latent topics after training.
+
+        Args:
+            device (str, optional): What device to use. Defaults to "cpu".
+
+        Returns:
+            _type_: A dataframe of cell by topics where each row sum to one.
+        """
         model = self.model.model_params()
         model.eval()
         model.to(device)
@@ -339,12 +344,23 @@ class STAMP:
 
     def get_feature_by_topic(
         self,
-        pseudocount=0,
         device="cpu",
         num_samples=1000,
         pct=0.5,
         return_softmax=False,
     ):
+        """Get the gene modules
+
+        Args:
+            device (str, optional): Which device to use. Defaults to "cpu".
+            num_samples (int, optional): Number of samples to use for calculation.
+              Defaults to 1000.
+            pct (float, optional): ??? . Defaults to 0.5.
+            return_softmax (bool, optional): ???. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
         # pseudcount of 0.5 aga aga
         # feature_topic = feature_topic.t()
         # Transform to torch log scale
@@ -397,49 +413,49 @@ class STAMP:
         )
         return background
 
-    def plot_qc(self, n_obs=1000, gene=None, device="cuda:0"):
-        self.model.eval()
-        self.model.to(device)
-        self.data.to(device)
+    # def plot_qc(self, n_obs=1000, gene=None, device="cuda:0"):
+    #     self.model.eval()
+    #     self.model.to(device)
+    #     self.data.to(device)
 
-        if gene is None:
-            gene = self.adata.var_names
-        gene_index = np.where(self.adata.var_names == gene)[0]
+    #     if gene is None:
+    #         gene = self.adata.var_names
+    #     gene_index = np.where(self.adata.var_names == gene)[0]
 
-        x_plot = self.data.x.detach().cpu().numpy()
-        obs = random.sample(range(x_plot.shape[0]), n_obs)
-        x_plot = x_plot[obs, :]
-        x_plot = x_plot / x_plot.sum(axis=1, keepdims=True)
+    #     x_plot = self.data.x.detach().cpu().numpy()
+    #     obs = random.sample(range(x_plot.shape[0]), n_obs)
+    #     x_plot = x_plot[obs, :]
+    #     x_plot = x_plot / x_plot.sum(axis=1, keepdims=True)
 
-        if self.batch_key is None:
-            w = self.get_feature_by_topic(return_softmax=True)
-            z = self.get_cell_by_topic()
-            w = w.to_numpy()
-            z = z.to_numpy()
-            z = z[obs, :]
-            mean = z @ w.transpose()
-            mean = mean
-        else:
-            w = self.get_feature_by_topic(return_softmax=True)
-            z = self.get_cell_by_topic()
-            w = w.to_numpy()
-            z = z.to_numpy()
-            z = z[obs, :]
-            ys = self.data.st_batch.detach().cpu().numpy()
-            ys = ys[obs, :]
-            z = np.hstack([z, ys])
-            mean = z @ w.transpose()
-            # if n_obs > x.shape[0]:
-        #     n_obs = x.shape[0]
-        x_plot = x_plot[:, gene_index].ravel()
-        y_plot = mean[:, gene_index].ravel()
+    #     if self.batch_key is None:
+    #         w = self.get_feature_by_topic(return_softmax=True)
+    #         z = self.get_cell_by_topic()
+    #         w = w.to_numpy()
+    #         z = z.to_numpy()
+    #         z = z[obs, :]
+    #         mean = z @ w.transpose()
+    #         mean = mean
+    #     else:
+    #         w = self.get_feature_by_topic(return_softmax=True)
+    #         z = self.get_cell_by_topic()
+    #         w = w.to_numpy()
+    #         z = z.to_numpy()
+    #         z = z[obs, :]
+    #         ys = self.data.st_batch.detach().cpu().numpy()
+    #         ys = ys[obs, :]
+    #         z = np.hstack([z, ys])
+    #         mean = z @ w.transpose()
+    #         # if n_obs > x.shape[0]:
+    #     #     n_obs = x.shape[0]
+    #     x_plot = x_plot[:, gene_index].ravel()
+    #     y_plot = mean[:, gene_index].ravel()
 
-        plt.hist2d(
-            x_plot,
-            y_plot,
-            bins=100,
-            norm=matplotlib.colors.LogNorm(),
-        )
+    #     plt.hist2d(
+    #         x_plot,
+    #         y_plot,
+    #         bins=100,
+    #         norm=matplotlib.colors.LogNorm(),
+    #     )
 
 
 class EarlyStopper:
