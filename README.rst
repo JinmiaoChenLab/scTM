@@ -18,7 +18,7 @@ scTM is a package for spatial transcriptomics for single cell that uses topic mo
 Currently available modules: STAMP
 
 * Free software: MIT license
-* Documentation: https://sctm.readthedocs.io.
+* Documentation: https://JinmiaoChenLab.github.io/scTM/.
 
 
 Features
