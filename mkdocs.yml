@@ -1,7 +1,7 @@
 site_name: scTM
 site_description: The documentation for the scTM software library.
-site_url: http://www.google.com
-repo_url: http://www.google.com
+site_url: https://jinmiaochenlab.github.io/scTM/
+repo_url: https://github.com/JinmiaoChenLab/scTM
 repo_name: scTM
 
 edit_uri: ""
@@ -10,7 +10,8 @@ nav:
   - 🏡 Home: index.md
   - Getting started:
       - 🛠️ Installation: installation.md
-      - Notebook page: example.ipynb
+  - 🎓 Tutorials:
+    - STAMP: example.ipynb
   # - 💡 Background:
   #   - Intro to Topquic Models: examples/intro_to_topicmodel.py
   - 📕 Reference: api/
