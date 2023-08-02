@@ -8,12 +8,13 @@ scTM
 
 
 .. image:: https://readthedocs.org/projects/sctm/badge/?version=latest
-        :target: https://sctm.readthedocs.io/en/latest/?version=latest
+        :target: https://JinmiaoChenLab.github.io/scTM/
         :alt: Documentation Status
 
 
 
-scTM is a package for spatial transcriptomics for single cell that uses topic modelling, solved with stochastic variational infernce.
+scTM is a package for spatial transcriptomics for single cell that uses topic modelling, solved with stochastic variational infernce. The intresting
+part is with the formulation of topic models, we can get interpretable embedding which are useful for downstream analysis.
 
 Currently available modules: STAMP
 
@@ -24,7 +25,21 @@ Currently available modules: STAMP
 Features
 --------
 
-* TODO
+- STAMP: A spatially-aware dimensional reduction designed for spatial data.
+
+Minimal Installation
+--------
+
+```
+conda create --name disco python=3.8
+git clone https://JinmiaoChenLab.github.io/scTM/
+pip install .
+```
+
+Basic Usage
+-------
+To be added
+
 
 Credits
 -------

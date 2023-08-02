@@ -80,9 +80,7 @@ class MLPEncoderMVN(nn.Module):
         self.norm_topic = nn.BatchNorm1d(
             n_topics, affine=False, track_running_stats=False
         )
-        # self.norm_topic = nn.LayerNorm(
-        #     [n_topics], elementwise_affine=False,
-        # )
+
         self.norm_batch = nn.BatchNorm1d(
             n_batches, affine=False, track_running_stats=False
         )
@@ -92,26 +90,12 @@ class MLPEncoderMVN(nn.Module):
         self.k = int(self.n_topics * (self.n_topics - 1) / 2)
 
         self.cov_factor = nn.Linear(hidden_size, self.k)
-        # self.cov_factor = nn.Linear(hidden_size, n_topics * self.k)
         self.linear = nn.Linear(n_genes * (n_layers + 1) + n_batches, hidden_size)
-
-        # self.linkx = LINKX(
-        #     num_nodes,
-        #     n_genes,
-        #     hidden_size,
-        #     n_topics,
-        #     n_layers[0],
-        #     n_layers[1],
-        #     n_layers[2],
-        #     dropout,
-        #     full=False,
-        # )
 
         self.reset_parameters()
 
     def forward(self, x):
-        # x = torch.log(x + 1)
-        # x = self.bn_pp(x)
+
         x = self.drop(x)
         x = self.bn_pp(x)
         x = self.linear(x)
@@ -163,11 +147,8 @@ class BatchEncoder(nn.Module):
         return (mu - mu.mean()) / mu.std(), sigma
 
     def reset_parameters(self):
-        # nn.init.xavier_uniform_(self.linear.weight)
         nn.init.xavier_uniform_(self.linear1.weight)
         nn.init.xavier_uniform_(self.linear2.weight)
-        # nn.init.zeros_(self.linear1.bias)
-        # nn.init.zeros_(self.linear2.bias)
 
 
 class spatialLDAModel(nn.Module):
@@ -217,30 +198,11 @@ class spatialLDAModel(nn.Module):
                 n_batches,
             )
 
-        # if self.mode == "cell-batch":
-        self.batchencoder = BatchEncoder(n_genes, n_layers, n_batches)
+        if self.mode == "cell-batch":
+            self.batchencoder = BatchEncoder(n_genes, n_layers, n_batches)
 
-        # self.n_topics = self.n_batches + self.n_topics
         self.register_buffer("init_bg", init_bg, persistent=False)
         self.register_buffer("alpha", torch.tensor(1 / self.n_topics), persistent=False)
-        # # self.init_bg = nn.Parameter(init_bg)
-        # self.register_buffer("tau_aux_shape", torch.ones(self.n_topics))
-        # self.register_buffer("delta_aux_shape", torch.ones(self.n_genes))
-        # self.register_buffer(
-        #     "lambda_aux_shape", torch.ones(self.n_topics, self.n_genes)
-        # )
-        # self.register_buffer("tau_aux_scale", torch.ones(self.n_topics))
-        # self.register_buffer("delta_aux_scale", torch.ones(self.n_genes))
-        # self.register_buffer(
-        #     "lambda_aux_scale", torch.ones(self.n_topics, self.n_genes)
-        # )
-        # nn.init.uniform_(self.lambda_aux_scale)
-        # self.lambda_aux_scale = self.lambda_aux_scale + EPS
-        # nn.init.uniform_(self.tau_aux_scale)
-        # self.tau_aux_scale = self.tau_aux_scale + EPS
-
-        # alpha = 1 / self.n_topics
-        # self.ln_sigma = 1
 
     def model(self, x, sgc_x, ys=None):
         pyro.module("stamp", self)
@@ -262,10 +224,6 @@ class spatialLDAModel(nn.Module):
             gsf_aux = pyro.sample(
                 "gsf_aux", dist.HalfNormal(torch.ones(1, device=x.device) * 5)
             )
-
-            # bs_aux = pyro.sample(
-            #     "bs_aux", dist.HalfNormal(torch.ones(1, device=x.device) * 5)
-            # )
 
         with pyro.plate("genes", self.n_genes):
             with poutine.scale(scale=batch_size / self.num_nodes):
@@ -357,14 +315,7 @@ class spatialLDAModel(nn.Module):
                 )
 
         with pyro.plate("batch", batch_size):
-            # with poutine.scale(scale=self.beta):
-            # bs = pyro.sample(
-            #     "bs",
-            #     dist.Cauchy(
-            #         x.new_zeros((batch_size, 1)),
-            #         x.new_ones((batch_size, 1)) * bs_aux,
-            #     ).to_event(1),
-            # )
+
             if self.enc_distribution == "mvn":
                 z_topic_loc = x.new_zeros((batch_size, self.n_topics))
                 z_topic_scale = x.new_ones((batch_size, self.n_topics))
@@ -383,7 +334,7 @@ class spatialLDAModel(nn.Module):
                     ys_add = pyro.param(
                         "ys_add", torch.randn(self.n_batches, device=x.device)
                     )
-                    # ys_add = torch.sigmoid(ys_add)
+
                 elif self.mode == "cell-batch":
                     ys_add = self.batchencoder(torch.cat([x, ys], dim=1))
 
@@ -399,9 +350,8 @@ class spatialLDAModel(nn.Module):
                         torch.randn((self.n_batches, self.n_genes), device=x.device),
                     )
                     w = torch.cat([w, w_batch], dim=0)
-                    # print(w.shape)
                     mean = torch.matmul(
-                        z, torch.exp(F.log_softmax(w + self.init_bg + gsf, dim=1))
+                        z, torch.exp(F.log_softmax(w + gsf + self.init_bg, dim=1))
                     )
 
             else:
@@ -415,15 +365,10 @@ class spatialLDAModel(nn.Module):
                     mean = torch.matmul(
                         z_topic, torch.exp(F.log_softmax(w + self.init_bg + gsf, dim=1))
                     )
-                # mean = torch.matmul(
-                #     z_topic, w / w.sum(dim = 0).unsqueeze(-1)
-                # )
-                # mean = mean / mean.sum(dim=-1).unsqueeze(-1)
-            # mean = mean + ls *
-            #
+
             rate = 1 / disp
             mean, rate = broadcast_all(mean, rate)
-            mean = ls * mean  # + ads
+            mean = ls * mean
             pyro.sample("obs", dist.GammaPoisson(rate, rate / mean).to_event(1), obs=x)
 
     def guide(self, x, sgc_x=None, ys=None):

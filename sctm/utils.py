@@ -1,8 +1,7 @@
 import numpy as np
 import torch
-from torch_sparse import SparseTensor, matmul
-from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from scipy.sparse import issparse
+from torch_geometric.utils import scatter, to_torch_csc_tensor
 
 
 def check_layer(adata, layer):
@@ -30,34 +29,32 @@ def get_init_bg(data):
 
 
 def precompute_SGC(data, n_layers, add_self_loops=True):
-    # Why is this inplace?
-    edge_weight = data.edge_weight
-    num_nodes = data.num_nodes
-    assert data.edge_index is not None
+
     row, col = data.edge_index
+    N = data.num_nodes
 
-    adj_t = SparseTensor(
-        row=col, col=row, sparse_sizes=(data.num_nodes, data.num_nodes)
-    )
-    print("Precomputing neighborhood")
+    edge_weight = data.edge_weight
+    if edge_weight is None:
+        edge_weight = torch.ones(data.num_edges, device=row.device)
 
-    edge_index = gcn_norm(  # yapf: disable
-        adj_t,
-        edge_weight,
-        num_nodes,
-        False,
-        add_self_loops,
-    )
+    deg = scatter(edge_weight, col, dim_size=N, reduce="sum")
+    deg_inv_sqrt = deg.pow_(-0.5)
+    deg_inv_sqrt.masked_fill_(deg_inv_sqrt == float("inf"), 0)
+    edge_weight = deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
+    adj = to_torch_csc_tensor(data.edge_index, edge_weight, size=(N, N))
+    adj_t = adj.t()
 
     assert data.x is not None
     xs = data.x
     xs = torch.log(xs + 1)
     sgc = [xs]
     for i in range(n_layers):
-        xs = matmul(edge_index, xs, reduce="add")
+        # xs = matmul(edge_index, xs, reduce="add")
+        xs = adj_t @ sgc[-1]
         sgc.append(xs)
 
     # data["x"] = data.x
     data["sgc_x"] = torch.cat(sgc, dim=1)
+    print(data["sgc_x"].sum())
     # torch.concat(sgc, dim = 1)
     return data
