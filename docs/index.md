@@ -6,6 +6,8 @@ Topic models are powerful algorithms used in natural language processing to unco
 
 ### STAMP
 In STAMP, we have more assumptions on the data generating process. The main two ones are
+
 1. Spatial Information is important, therefore we need a way to incorporate spatial information in the model. Here, we use a graph neural network for the inference network to incorporate spatial information
 2. The gene modules are sparse leading to interpretabiity and more robustness. Therefore, we suggest the use of horseshoe priors
+
 STAMP is solved with black box inference, which leads to efficient optimization.

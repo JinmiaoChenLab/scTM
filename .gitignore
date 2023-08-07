@@ -161,5 +161,8 @@ cython_debug/
 .pdm-python
 .pdm.lock.swp
 
-docs/data
+docs/data/
+docs/notebooks/stamp/data/
+docs/notebooks/stamp/DISCOtmp
 docs/DISCOtmp
+.vscode
