@@ -30,19 +30,20 @@ def get_init_bg(data):
 
 def precompute_SGC(data, n_layers, add_self_loops=True):
 
-    row, col = data.edge_index
-    N = data.num_nodes
+    if n_layers >= 1:
+        row, col = data.edge_index
+        N = data.num_nodes
 
-    edge_weight = data.edge_weight
-    if edge_weight is None:
-        edge_weight = torch.ones(data.num_edges, device=row.device)
+        edge_weight = data.edge_weight
+        if edge_weight is None:
+            edge_weight = torch.ones(data.num_edges, device=row.device)
 
-    deg = scatter(edge_weight, col, dim_size=N, reduce="sum")
-    deg_inv_sqrt = deg.pow_(-0.5)
-    deg_inv_sqrt.masked_fill_(deg_inv_sqrt == float("inf"), 0)
-    edge_weight = deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
-    adj = to_torch_csc_tensor(data.edge_index, edge_weight, size=(N, N))
-    adj_t = adj.t()
+        deg = scatter(edge_weight, col, dim_size=N, reduce="sum")
+        deg_inv_sqrt = deg.pow_(-0.5)
+        deg_inv_sqrt.masked_fill_(deg_inv_sqrt == float("inf"), 0)
+        edge_weight = deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
+        adj = to_torch_csc_tensor(data.edge_index, edge_weight, size=(N, N))
+        adj_t = adj.t()
 
     assert data.x is not None
     xs = data.x
@@ -55,6 +56,4 @@ def precompute_SGC(data, n_layers, add_self_loops=True):
 
     # data["x"] = data.x
     data["sgc_x"] = torch.cat(sgc, dim=1)
-    print(data["sgc_x"].sum())
-    # torch.concat(sgc, dim = 1)
     return data

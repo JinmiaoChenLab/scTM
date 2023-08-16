@@ -4,13 +4,16 @@ import numpy as np
 import pandas as pd
 import pyro
 import pyro.distributions as dist
+from pyro.infer import (
+    SVI,
+    TraceMeanField_ELBO,
+)
+from pyro.optim import AdamW
 import scipy
 import torch
 
 # from .data import choose_dataloader
 import torch.nn.functional as F
-from pyro.infer import SVI, TraceMeanField_ELBO
-from pyro.optim import AdamW
 from torch.utils.data import DataLoader
 from torch_geometric.data import Data
 from torch_geometric.utils import from_scipy_sparse_matrix
@@ -22,26 +25,29 @@ from tqdm import tqdm
 from .data import RandomNodeSampler
 from .metrics import get_metrics
 from .model import spatialLDAModel
-from .utils import check_layer, get_init_bg, precompute_SGC
+from .utils import (
+    check_layer,
+    get_init_bg,
+    precompute_SGC,
+)
 
 
 class STAMP:
     def __init__(
         self,
         adata,
-        n_topics=10,
+        n_topics=20,
         n_layers=1,
         hidden_size=50,
         layer=None,
         dropout=0.0,
-        batch_key=None,
-        batch_mode="batch",
+        categorical_covariate_keys=None,
+        continous_covariate_keys=None,
         verbose=True,
         batch_size=1024,
         enc_distribution="mvn",
         beta=1,
     ):
-
         """_summary_
 
         Args:
@@ -52,24 +58,22 @@ class STAMP:
                 encoder. Defaults to 50.
             layer (_type_, optional): Layer where the counts data are stored. Defaults
                 to None.
-            dropout (float, optional): Dropout used for the encoder. Defaults to 0.0.
+            dropout (float, optional): Dropout used for the encoder. Defaults to 0.2.
             batch_key (_type_, optional): Location of batch in obs where the batch
                 information is stored. Defaults to None.
-            batch_mode (str, optional): How to model the batch effects. Defaults to
-                "batch".
             verbose (bool, optional): Print out information on the model. Defaults to
                 True.
             batch_size (int, optional): Batch size. Defaults to 1024.
             enc_distribution (str, optional): Encoder distribution. Choices are
                 multivariate normal. Defaults to "mvn".
-            beta (float, optional): Beta as in Beta-VAE. Defaults to 0.1.
+            beta (float, optional): Beta as in Beta-VAE. Defaults to 1.
         """
         pyro.clear_param_store()
 
-        self.batch_key = batch_key
+        self.continous_covariate_keys = continous_covariate_keys
+        self.categorical_covariate_keys = categorical_covariate_keys
         self.hidden_size = hidden_size
         self.n_topics = n_topics
-        self.mode = batch_mode
         self.adata = adata
         self.n_cells = adata.shape[0]
         self.n_genes = adata.shape[1]
@@ -79,77 +83,92 @@ class STAMP:
         self.layer = layer
         self.batch_size = batch_size
         self.enc_distribution = enc_distribution
+        self.beta = beta
 
-        if batch_key is None:
-            bg = get_init_bg(check_layer(adata, layer))
-            bg_init = torch.from_numpy(bg)
-        else:
-            # bg_list = []
-            self.batch_series = adata.obs[batch_key].astype("category")
-            bg = get_init_bg(check_layer(adata, layer))
-            bg_init = torch.from_numpy(bg)
-            # for batches in self.batch_series.cat.categories:
-            #     bg_batch = get_init_bg(
-            #         check_layer(adata[adata.obs[batch_key] == batches, :], layer)
-            #     )
-            #     bg_list.append(bg_batch)
-            # bg = np.vstack(bg_list)
-            # bg_init = torch.from_numpy(bg)
+        bg = get_init_bg(check_layer(adata, layer))
+        self.bg_init = torch.from_numpy(bg)
 
-        self.data = self.setup(adata, layer, batch_key)
-        # self.dispersion = get_mean_dispersion(check_layer(adata, layer))
-        # self.dispersion = torch.from_numpy(self.dispersion)
+        self.data = self.setup(
+            adata, layer, categorical_covariate_keys, continous_covariate_keys
+        )
 
         self.model = torch.compile(
             spatialLDAModel(
                 self.n_genes,
                 self.hidden_size,
                 self.n_topics,
-                self.mode,
                 self.dropout,
-                bg_init,
+                self.bg_init,
                 self.n_layers,
                 self.n_batches,
                 self.n_cells,
                 self.enc_distribution,
-                beta
-                # self.dispersion
+                self.beta,
             )
         )
 
         if verbose:
             print(summary(self.model))
 
-    def setup(self, adata, layer, batch_key):
-        if "spatial_connectivities" not in adata.obsp.keys():
-            raise KeyError("spatial_connectivities not found")
-
+    def setup(self, adata, layer, categorical_covariate_keys, continous_covariate_keys):
         x_numpy = check_layer(adata, layer)
         x = torch.from_numpy(x_numpy)
 
-        adj = SparseTensor.from_scipy(
-            adata.obsp["spatial_connectivities"]
-            + scipy.sparse.identity(n=x_numpy.shape[0])
-        )
-        adj = adj.t()
-        edge_index = from_scipy_sparse_matrix(
-            adata.obsp["spatial_connectivities"]
-            + scipy.sparse.identity(n=x_numpy.shape[0])
-        )[0]
+        if self.n_layers >= 1:
+            if "spatial_connectivities" not in adata.obsp.keys():
+                raise KeyError("spatial_connectivities not found")
 
-        if batch_key is not None:
-            self.batch_series = adata.obs[batch_key].astype("category")
-            self.n_batches = self.batch_series.nunique()
-            batch_factorize, _ = pd.factorize(self.batch_series)
-            self.batch_factorize = torch.from_numpy(batch_factorize)
-            # Just allow batch size = 1 for now
-            self.one_hot = F.one_hot(self.batch_factorize)
-            data = Data(
-                x=x, edge_index=edge_index, adj_t=adj, st_batch=self.one_hot.float()
+            adj = SparseTensor.from_scipy(
+                adata.obsp["spatial_connectivities"]
+                + scipy.sparse.identity(n=x_numpy.shape[0])
             )
+            adj = adj.t()
+            edge_index = from_scipy_sparse_matrix(
+                adata.obsp["spatial_connectivities"]
+                + scipy.sparse.identity(n=x_numpy.shape[0])
+            )[0]
         else:
+            adj = None
+            edge_index = None
+
+        self.n_batches = 0
+        self.one_hot = []
+        if categorical_covariate_keys is not None:
+            if not isinstance(categorical_covariate_keys, list):
+                raise ValueError("categorical_covariate_keys must be a list.")
+
+            for categorical_covariate_key in categorical_covariate_keys:
+                self.batch_series = adata.obs[categorical_covariate_key].astype(
+                    "category"
+                )
+                self.n_batches += self.batch_series.nunique()
+                batch_factorize, _ = pd.factorize(self.batch_series)
+                self.batch_factorize = torch.from_numpy(batch_factorize)
+                self.one_hot.append(F.one_hot(self.batch_factorize).float())
+
+        if continous_covariate_keys is not None:
+            if not isinstance(continous_covariate_keys, list):
+                raise ValueError("continous_covariate_keys must be a list.")
+
+            for continous_covariate_key in continous_covariate_keys:
+                self.batch_series = adata.obs[continous_covariate_key].astype("float32")
+                self.batch_series = (
+                    self.batch_series - self.batch_series.mean()
+                ) / self.batch_series.std()
+                self.n_batches += 1
+                self.batch_factorize = torch.from_numpy(self.batch_series.values)
+                self.one_hot.append(self.batch_factorize.float().reshape(-1, 1))
+
+        if self.n_batches == 0:
+            self.n_batches += 1
             data = Data(x=x, edge_index=edge_index, adj_t=adj)
-            self.n_batches = 1
+        else:
+            data = Data(
+                x=x,
+                edge_index=edge_index,
+                adj_t=adj,
+                st_batch=torch.cat(self.one_hot, dim=1),
+            )
 
         data = precompute_SGC(data, n_layers=self.n_layers, add_self_loops=True)
 
@@ -160,15 +179,14 @@ class STAMP:
             self.dataloader = RandomNodeSampler(
                 data, batch_size=self.batch_size, shuffle=True, pin_memory=False
             )
-
         return data
 
     def train(
         self,
         max_epochs=2000,
-        learning_rate=0.01,
+        learning_rate=0.003,
         device="cuda:0",
-        weight_decay=0.01,
+        weight_decay=0.1,
         early_stop=True,
         patience=20,
     ):
@@ -182,7 +200,7 @@ class STAMP:
             device (str, optional): Which device to run model on. Use "cpu"
                 to run on cpu and cuda to run on gpu. Defaults to "cuda:0".
             weight_decay (float, optional): Weight decay of AdamW optimizer.
-                 Defaults to 0.01.
+                 Defaults to 0.1.
             early_stop (bool, optional): Whether to early stop when training plateau.
                  Defaults to True.
             patience (int, optional): How many epochs to stop training when
@@ -197,7 +215,6 @@ class STAMP:
         )
 
         self.device = device
-        losses = []
         self.model = self.model.to(device)
         pbar = tqdm(range(max_epochs))
         avg_loss = np.Inf
@@ -213,38 +230,17 @@ class STAMP:
             losses = []
             # optimizer.zero_grad()
             for batch_idx, batch in enumerate(self.dataloader):
-                # for batch in self.dataloader:
                 batch = batch.to(device)
-                # Batch index is whatever
-                # if self.n_parts == 1:
-                #     batch.edge_index, _ = dropout_adj(batch.edge_index, p=1)
-                # with torch.cuda.amp.autocast():
                 if self.n_batches == 1:
                     batch_loss = svi.step(batch.x, batch.sgc_x, None)
-                    # self.model.fixed_point_updates()
                 else:
                     batch_loss = svi.step(batch.x, batch.sgc_x, batch.st_batch)
-                    # self.model.fixed_point_updates()
 
-                # tau.require_grad_ = False
-                # tau = tau.detach()
-                #   tau_prev = tau
-                # wandb.log(
-                #     {
-                #         "loss": loss,
-                #         "kl": kl,
-                #         "struct_loss": struct,
-                #         "feature_loss": feature,
-                #     }
-                # )
-                # No longer accumulate over a batch and step
-                # loss.backward()
-                # torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1)
-                # optimizer.step()
-                # batch_loss += float(loss) * batch.num_nodes
                 losses.append(float(batch_loss))
 
             avg_loss = sum(losses) / self.n_cells
+            if np.isnan(avg_loss):
+                break
             pbar.set_description(f"Loss:{avg_loss:.3f}")
 
             if early_stop:
@@ -328,7 +324,9 @@ class STAMP:
         with torch.no_grad():
             # if self.batch_key is None:
             x = self.data.x
-            if self.batch_key is None:
+            if (self.continous_covariate_keys is None) and (
+                self.categorical_covariate_keys is None
+            ):
                 cell_topic = self.model.guide(x, self.data.sgc_x)
             else:
                 cell_topic = self.model.guide(x, self.data.sgc_x, self.data.st_batch)

@@ -27,9 +27,9 @@ class MLPEncoderDirichlet(nn.Module):
         super().__init__()
 
         self.drop = nn.Dropout(dropout)
-        self.bn_pp = nn.BatchNorm1d(n_genes * (n_layers + 1) + n_batches)
+        self.bn_pp = nn.BatchNorm1d(n_genes * (n_layers + 1))
 
-        self.linear = nn.Linear(n_genes * (n_layers + 1) + n_batches, hidden_size)
+        self.linear = nn.Linear(n_genes * (n_layers + 1), hidden_size)
         self.mu_topic = nn.Linear(hidden_size, n_topics)
         self.norm_topic = nn.BatchNorm1d(
             n_topics, affine=False, track_running_stats=False
@@ -46,7 +46,6 @@ class MLPEncoderDirichlet(nn.Module):
         concent = self.norm_topic(concent)
         concent = torch.clamp(concent, max=8)
         concent = concent.exp()
-
         return concent
 
     def reset_parameters(self):
@@ -69,20 +68,12 @@ class MLPEncoderMVN(nn.Module):
 
         self.n_topics = n_topics
         self.hidden_size = hidden_size
-        self.n_batches = n_batches
-
-        if self.n_batches == 1:
-            n_batches = 0
 
         self.drop = nn.Dropout(dropout)
-        self.bn_pp = nn.BatchNorm1d(n_genes * (n_layers + 1) + n_batches)
+        self.bn_pp = nn.BatchNorm1d(n_genes * (n_layers + 1))
         self.bn = nn.BatchNorm1d(hidden_size)
         self.norm_topic = nn.BatchNorm1d(
             n_topics, affine=False, track_running_stats=False
-        )
-
-        self.norm_batch = nn.BatchNorm1d(
-            n_batches, affine=False, track_running_stats=False
         )
 
         self.mu_topic = nn.Linear(hidden_size, n_topics)
@@ -90,16 +81,17 @@ class MLPEncoderMVN(nn.Module):
         self.k = int(self.n_topics * (self.n_topics - 1) / 2)
 
         self.cov_factor = nn.Linear(hidden_size, self.k)
-        self.linear = nn.Linear(n_genes * (n_layers + 1) + n_batches, hidden_size)
+        self.linear = nn.Linear(n_genes * (n_layers + 1), hidden_size)
 
         self.reset_parameters()
 
     def forward(self, x):
-
         x = self.drop(x)
         x = self.bn_pp(x)
         x = self.linear(x)
         x = F.relu(self.bn(x))
+        # x = self.drop(x)
+        # x = F.relu(x)
 
         mu_topic = self.mu_topic(x)
         mu_topic = self.norm_topic(mu_topic)
@@ -123,32 +115,34 @@ class MLPEncoderMVN(nn.Module):
         nn.init.zeros_(self.cov_factor.bias)
 
 
-class BatchEncoder(nn.Module):
-    def __init__(self, n_genes, n_layers, n_batches):
-        super().__init__()
+# class BatchEncoder(nn.Module):
+#     def __init__(self, n_genes, n_layers, n_batches):
+#         super().__init__()
 
-        if n_batches == 1:
-            n_batches = 0
+#         if n_batches == 1:
+#             n_batches = 0
 
-        self.bn_pp = nn.BatchNorm1d(n_genes * (n_layers + 1) + n_batches, affine=False)
-        self.linear1 = nn.Linear(n_genes * (n_layers + 1) + n_batches, 1)
-        self.linear2 = nn.Linear(n_genes * (n_layers + 1) + n_batches, 1)
-        self.reset_parameters()
+#         self.bn_pp = nn.BatchNorm1d(n_genes * (n_layers + 1) + n_batches)
+#         self.linear1 = nn.Linear(n_genes * (n_layers + 1) + n_batches, 20)
+#         self.linear2 = nn.Linear(20, n_genes)
+#         self.reset_parameters()
 
-    def forward(self, x):
-        x = torch.log(x + 1)
-        # x = self.bn_pp(x)
-        mu = self.linear1(x)
-        # x = F.gelu(self.linear(x))
-        # mu = self.linear1(x)
-        sigma = self.linear2(x)
-        # sigma = self.bn1(sigma)
-        sigma = F.softplus(sigma)  # (mu - mu.mean())/mu.std()
-        return (mu - mu.mean()) / mu.std(), sigma
+#     def forward(self, x):
+#         x = torch.log(x + 1)
+#         # x = self.bn_pp(x)
+#         # mu = self.linear1(x)
+#         # x = F.gelu(self.linear(x))
+#         # mu = self.linear1(x)
+#         x = self.linear1(x)
+#         sigma = self.linear2(x)
+#         # sigma = self.bn1(sigma)
+#         sigma = F.softplus(sigma)  # (mu - mu.mean())/mu.std()
+#         # return (mu - mu.mean()) / mu.std(), sigma
+#         return sigma
 
-    def reset_parameters(self):
-        nn.init.xavier_uniform_(self.linear1.weight)
-        nn.init.xavier_uniform_(self.linear2.weight)
+#     def reset_parameters(self):
+#         nn.init.xavier_uniform_(self.linear1.weight)
+#         nn.init.xavier_uniform_(self.linear2.weight)
 
 
 class spatialLDAModel(nn.Module):
@@ -157,7 +151,6 @@ class spatialLDAModel(nn.Module):
         n_genes,
         hidden_size,
         n_topics,
-        mode,
         dropout,
         init_bg,
         n_layers,
@@ -173,7 +166,6 @@ class spatialLDAModel(nn.Module):
         self.n_batches = n_batches
         self.num_nodes = num_nodes
         self.n_topics = n_topics
-        self.mode = mode
         self.beta = beta
         self.enc_distribution = enc_distribution
 
@@ -198,9 +190,8 @@ class spatialLDAModel(nn.Module):
                 n_batches,
             )
 
-        if self.mode == "cell-batch":
-            self.batchencoder = BatchEncoder(n_genes, n_layers, n_batches)
-
+        # if self.mode == "cell-batch":
+        # self.batchencoder = BatchEncoder(n_genes, n_layers, n_batches)
         self.register_buffer("init_bg", init_bg, persistent=False)
         self.register_buffer("alpha", torch.tensor(1 / self.n_topics), persistent=False)
 
@@ -217,16 +208,15 @@ class spatialLDAModel(nn.Module):
                 dist.HalfNormal(torch.ones(1, device=x.device) * 5),
             )
 
-            ys_scale_aux = pyro.sample(
-                "ys_scale_aux", dist.HalfNormal(torch.ones(1, device=x.device) * 5)
-            )
+            with pyro.plate("covariates", self.n_batches):
+                d_aux = pyro.sample(
+                    "d_aux",
+                    dist.HalfNormal(
+                        torch.ones(self.n_batches, device=x.device) * 1
+                    ).to_event(0),
+                )
 
-            gsf_aux = pyro.sample(
-                "gsf_aux", dist.HalfNormal(torch.ones(1, device=x.device) * 5)
-            )
-
-        with pyro.plate("genes", self.n_genes):
-            with poutine.scale(scale=batch_size / self.num_nodes):
+            with pyro.plate("genes", self.n_genes):
                 disp = pyro.sample(
                     "disp",
                     dist.HalfCauchy(
@@ -241,29 +231,17 @@ class spatialLDAModel(nn.Module):
                 delta = delta**2
                 delta = delta.unsqueeze(0).repeat([self.n_topics, 1])
 
-                ys_scale = pyro.sample(
-                    "ys_scale",
-                    dist.Cauchy(
-                        x.new_zeros(self.n_genes, self.n_batches),
-                        x.new_ones(self.n_genes, self.n_batches) * ys_scale_aux,
-                    ).to_event(1),
-                )
-                # ys_scale = torch.exp(ys_scale)
-                ys_scale = ys_scale.t()
-
-                gsf = pyro.sample(
-                    "gsf",
+                d = pyro.sample(
+                    "d",
                     dist.Normal(
-                        x.new_zeros(self.n_genes, 1),
-                        x.new_ones(self.n_genes, 1) * gsf_aux,
+                        x.new_zeros(self.n_genes, self.n_batches),
+                        x.new_ones(self.n_genes, self.n_batches) * d_aux,
                     ).to_event(1),
                 )
                 # ys_scale = torch.exp(ys_scale)
-                gsf = gsf.t()
+                d = d.t()
 
-        with pyro.plate("topics", self.n_topics):
-            # Horsehoe prior regularized
-            with poutine.scale(scale=batch_size / self.num_nodes):
+            with pyro.plate("topics", self.n_topics):
                 tau = pyro.sample(
                     "tau",
                     dist.HalfCauchy(torch.ones(self.n_topics, device=x.device)),
@@ -278,11 +256,13 @@ class spatialLDAModel(nn.Module):
                         torch.ones(
                             (self.n_topics, self.n_genes),
                             device=x.device,
-                        ),
+                        )
+                        * 0.5,
                         torch.ones(
                             (self.n_topics, self.n_genes),
                             device=x.device,
-                        ),
+                        )
+                        * 0.5,
                     ).to_event(1),
                 )
                 # caux = caux.unsqueeze(-1).expand(self.n_topics, self.n_genes)
@@ -315,11 +295,18 @@ class spatialLDAModel(nn.Module):
                 )
 
         with pyro.plate("batch", batch_size):
+            s = pyro.param("s", torch.zeros(1, device=x.device))
+            s = torch.sqrt(s.exp())
 
             if self.enc_distribution == "mvn":
                 z_topic_loc = x.new_zeros((batch_size, self.n_topics))
                 z_topic_scale = x.new_ones((batch_size, self.n_topics))
-
+                with poutine.scale(scale=self.beta):
+                    z_topic = pyro.sample(
+                        "z_topic",
+                        dist.Normal(z_topic_loc, z_topic_scale).to_event(1),
+                    )
+                    z = torch.exp(F.log_softmax(z_topic, dim=1))
             else:
                 with poutine.scale(scale=self.beta):
                     z_topic = pyro.sample(
@@ -328,43 +315,16 @@ class spatialLDAModel(nn.Module):
                             self.alpha.repeat(batch_size, self.n_topics)
                         ).to_event(0),
                     )
+                    z = z_topic
 
             if ys is not None:
-                if self.mode == "batch":
-                    ys_add = pyro.param(
-                        "ys_add", torch.randn(self.n_batches, device=x.device)
-                    )
+                d = ys @ d
 
-                elif self.mode == "cell-batch":
-                    ys_add = self.batchencoder(torch.cat([x, ys], dim=1))
-
-                with poutine.scale(scale=self.beta):
-                    z_topic = pyro.sample(
-                        "z_topic",
-                        dist.Normal(z_topic_loc, z_topic_scale).to_event(1),
-                    )
-                    z = torch.cat([z_topic, ys * ys_add], dim=1)
-                    z = torch.exp(F.log_softmax(z, dim=1))
-                    w_batch = pyro.param(
-                        "w_batch",
-                        torch.randn((self.n_batches, self.n_genes), device=x.device),
-                    )
-                    w = torch.cat([w, w_batch], dim=0)
-                    mean = torch.matmul(
-                        z, torch.exp(F.log_softmax(w + gsf + self.init_bg, dim=1))
-                    )
-
-            else:
-                with poutine.scale(scale=self.beta):
-                    z_topic = pyro.sample(
-                        "z_topic",
-                        dist.Normal(z_topic_loc, z_topic_scale).to_event(1),
-                    )
-                    z_topic = torch.exp(torch.log_softmax(z_topic, dim=1))
-
-                    mean = torch.matmul(
-                        z_topic, torch.exp(F.log_softmax(w + self.init_bg + gsf, dim=1))
-                    )
+            mean = torch.exp(
+                F.log_softmax(
+                    d + torch.log(z @ F.softmax(w + self.init_bg, dim=1)), dim=1
+                )
+            )
 
             rate = 1 / disp
             mean, rate = broadcast_all(mean, rate)
@@ -387,32 +347,19 @@ class spatialLDAModel(nn.Module):
             disp_aux_scale = torch.sqrt(torch.exp(disp_aux_scale))
             pyro.sample("disp_aux", dist.LogNormal(disp_aux_loc, disp_aux_scale))
 
-            ys_scale_aux_loc = pyro.param(
-                "ys_scale_aux_loc",
-                torch.zeros(1, device=x.device),
-            )
-            ys_scale_aux_scale = pyro.param(
-                "ys_scale_aux_scale",
-                torch.ones(1, device=x.device) * scale_init,
-            )
-            ys_scale_aux_scale = torch.sqrt(torch.exp(ys_scale_aux_scale))
-            pyro.sample(
-                "ys_scale_aux", dist.LogNormal(ys_scale_aux_loc, ys_scale_aux_scale)
-            )
+            with pyro.plate("covariates", self.n_batches):
+                d_aux_loc = pyro.param(
+                    "d_aux_loc",
+                    torch.zeros(self.n_batches, device=x.device),
+                )
+                d_aux_scale = pyro.param(
+                    "d_aux_scale",
+                    torch.ones(self.n_batches, device=x.device) * scale_init,
+                )
+                d_aux_scale = torch.sqrt(torch.exp(d_aux_scale))
+                pyro.sample("d_aux", dist.LogNormal(d_aux_loc, d_aux_scale).to_event(0))
 
-            gsf_aux_loc = pyro.param(
-                "gsf_aux_loc",
-                torch.zeros(1, device=x.device),
-            )
-            gsf_aux_scale = pyro.param(
-                "gsf_aux_scale",
-                torch.ones(1, device=x.device) * scale_init,
-            )
-            gsf_aux_scale = torch.sqrt(torch.exp(gsf_aux_scale))
-            pyro.sample("gsf_aux", dist.LogNormal(gsf_aux_loc, gsf_aux_scale))
-
-        with pyro.plate("genes", self.n_genes):
-            with poutine.scale(scale=batch_size / self.num_nodes):
+            with pyro.plate("genes", self.n_genes):
                 disp_loc = pyro.param(
                     "disp_loc",
                     torch.zeros(self.n_genes, device=x.device),
@@ -435,46 +382,25 @@ class spatialLDAModel(nn.Module):
                 delta_scale = torch.sqrt(torch.exp(delta_scale))
                 pyro.sample("delta", dist.LogNormal(delta_loc, delta_scale))
 
-                ys_scale_loc = pyro.param(
-                    "ys_scale_loc",
+                d_loc = pyro.param(
+                    "d_loc",
                     torch.zeros((self.n_genes, self.n_batches), device=x.device),
                 )
-
-                ys_scale_scale = pyro.param(
-                    "ys_scale_scale",
+                d_scale = pyro.param(
+                    "d_scale",
                     torch.ones((self.n_genes, self.n_batches), device=x.device)
                     * scale_init,
                 )
-                ys_scale_scale = torch.sqrt(torch.exp(ys_scale_scale))
+                d_scale = torch.sqrt(torch.exp(d_scale))
                 pyro.sample(
-                    "ys_scale",
+                    "d",
                     dist.Normal(
-                        ys_scale_loc,
-                        ys_scale_scale,
+                        d_loc,
+                        d_scale,
                     ).to_event(1),
                 )
 
-                gsf_loc = pyro.param(
-                    "gsf_loc",
-                    torch.zeros((self.n_genes, 1), device=x.device),
-                )
-
-                gsf_scale = pyro.param(
-                    "gsf_scale",
-                    torch.ones((self.n_genes, 1), device=x.device) * scale_init,
-                )
-
-                gsf_scale = torch.sqrt(torch.exp(gsf_scale))
-                pyro.sample(
-                    "gsf",
-                    dist.Normal(
-                        gsf_loc,
-                        gsf_scale,
-                    ).to_event(1),
-                )
-
-        with pyro.plate("topics", self.n_topics):
-            with poutine.scale(scale=batch_size / self.num_nodes):
+            with pyro.plate("topics", self.n_topics):
                 tau_loc = pyro.param(
                     "tau_loc",
                     torch.zeros((self.n_topics), device=x.device),
@@ -526,13 +452,7 @@ class spatialLDAModel(nn.Module):
 
         with pyro.plate("batch", batch_size):
             if self.enc_distribution == "mvn":
-                if self.n_batches > 1:
-                    new_x = torch.cat([sgc_x, ys], dim=1)
-                    z_loc, z_cov = self.encoder(new_x)
-                else:
-                    new_x = sgc_x
-                    z_loc, z_cov = self.encoder(sgc_x)
-
+                z_loc, z_cov = self.encoder(sgc_x)
                 with poutine.scale(scale=self.beta):
                     pyro.sample(
                         "z_topic",
@@ -540,10 +460,7 @@ class spatialLDAModel(nn.Module):
                     )
                 z_loc = F.softmax(z_loc, dim=1)
             else:
-                if self.n_batches > 1:
-                    z_loc = self.encoder(torch.cat([sgc_x, ys], dim=1))
-                else:
-                    z_loc = self.encoder(sgc_x)
+                z_loc = self.encoder(sgc_x)
 
                 with poutine.scale(scale=self.beta):
                     pyro.sample("z_topic", dist.Dirichlet(z_loc).to_event(0))

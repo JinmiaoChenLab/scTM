@@ -14,6 +14,7 @@ class RandomIndexSampler(torch.utils.data.Sampler):
         self.n_ids = self.get_node_indices()
 
     def get_node_indices(self):
+
         n_ids = torch.randperm(self.N)
         n_ids = list(torch.split(n_ids, self.batch_size))
 
@@ -50,17 +51,11 @@ class RandomNodeSampler(torch.utils.data.DataLoader):
     """
 
     def __init__(self, data, batch_size: int, shuffle: bool = False, **kwargs):
-        assert data.edge_index is not None
+        # assert data.edge_index is not None
 
         self.N = data.num_nodes
         self.E = data.num_edges
 
-        # self.adj = SparseTensor(
-        #     row=data.edge_index[0],
-        #     col=data.edge_index[1],
-        #     value=torch.arange(self.E, device=data.edge_index.device),
-        #     sparse_sizes=(N, N),
-        # )
         self.data = copy.copy(data)
         self.data.edge_index = None
 
@@ -80,21 +75,12 @@ class RandomNodeSampler(torch.utils.data.DataLoader):
 
         data = self.data.__class__()
         data.num_nodes = node_idx.size(0)
-        # adj, _ = self.adj.saint_subgraph(node_idx)
-        # adj = self.adj[node_idx, :].copy()
-
-        # row, col, edge_idx = adj.coo()
-        # data.edge_index = torch.stack([row, col], dim=0)
 
         for key, item in self.data:
             if key in ["num_nodes"]:
                 continue
             if isinstance(item, Tensor) and item.size(0) == self.N:
                 data[key] = item[node_idx]
-            # elif isinstance(item, Tensor) and item.size(0) == self.E:
-            #     data[key] = item[edge_idx]
-            # elif isinstance(item, SparseTensor):
-            #     data[key] = adj
             else:
                 data[key] = item
 

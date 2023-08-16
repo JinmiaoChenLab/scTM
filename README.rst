@@ -30,11 +30,18 @@ Features
 Minimal Installation
 --------
 
-```
-conda create --name disco python=3.8
+``
+pip install scTM
+``
+
+or
+
+``
+conda create --name sctm python=3.8
 git clone https://JinmiaoChenLab.github.io/scTM/
+cd scTM
 pip install .
-```
+``
 
 Basic Usage
 -------
