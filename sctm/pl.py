@@ -81,27 +81,20 @@ def heatmap(
 
 def matrixplot(
     adata,
+    topic_prop,
     groupby=None,
-    topics=None,
     figsize=(10, 5),
     dendrogram=False,
     swap_axes=True,
     cmap=None,
     save=None,
 ):
-    topic_prop = adata.obs.copy()
-
-    if topics is None:
-        topics = topic_prop.columns[topic_prop.columns.str.startswith("Topic")]
-        topic_prop = topic_prop.loc[:, topics]
-    else:
-        topic_prop = topic_prop.loc[:, topics]
 
     topic_adata = ad.AnnData(topic_prop)
     topic_adata.obs[groupby] = adata.obs[groupby]
     sc.pl.matrixplot(
         adata=topic_adata,
-        var_names=topics,
+        var_names=topic_prop.columns,
         groupby=groupby,
         figsize=figsize,
         dendrogram=dendrogram,
@@ -113,27 +106,21 @@ def matrixplot(
 
 def tracksplot(
     adata,
+    topic_prop,
     groupby=None,
-    topics=None,
     figsize=(10, 5),
     dendrogram=False,
     swap_axes=True,
     cmap=None,
     save=None,
 ):
-    topic_prop = adata.obs.copy()
-
-    if topics is None:
-        topics = topic_prop.columns[topic_prop.columns.str.startswith("Topic")]
-        topic_prop = topic_prop.loc[:, topics]
-    else:
-        topic_prop = topic_prop.loc[:, topics]
 
     topic_adata = ad.AnnData(topic_prop)
     topic_adata.obs[groupby] = adata.obs[groupby]
+
     sc.pl.tracksplot(
         adata=topic_adata,
-        var_names=topics,
+        var_names=topic_prop.columns,
         groupby=groupby,
         figsize=figsize,
         dendrogram=dendrogram,

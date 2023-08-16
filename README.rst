@@ -29,23 +29,22 @@ Features
 Minimal Installation
 --------------------
 
-``
-pip install scTM
-``
+.. code-block:: python
+
+    pip install scTM
 
 or
 
-``
-conda create --name sctm python=3.8
-git clone https://JinmiaoChenLab.github.io/scTM/
-cd scTM
-pip install .
-``
+.. code-block:: python
+
+    conda create --name sctm python=3.8
+    git clone https://JinmiaoChenLab.github.io/scTM/
+    cd scTM
+    pip install .
 
 Basic Usage
 -----------
-To be added
-
+Check out our usage of STAMP in the documentation at https://jinmiaochenlab.github.io/scTM/notebooks/stamp/example1/
 
 Credits
 -------

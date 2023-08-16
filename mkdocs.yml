@@ -11,9 +11,9 @@ nav:
   - Getting started:
       - 🛠️ Installation: installation.md
   - 🎓 Tutorials:
-    - STAMP breast cancer example: notebooks/stamp/example1.ipynb
-    - STAMP mouse brain example with related DISCO inference: notebooks/stamp/example2.ipynb
-    - STAMP multiple dataset example: notebokos/stamp/example3.ipynb
+    - STAMP breast cancer and cell/phenotype inference with DISCO signatures: notebooks/stamp/example1.ipynb
+    - STAMP joint mouse brain Visium: notebooks/stamp/example2.ipynb
+    - STAMP lung cancer SMI: notebooks/stamp/example3.ipynb
   # - 💡 Background:
   #   - Intro to Topquic Models: examples/intro_to_topicmodel.py
   - 📕 Reference: api/

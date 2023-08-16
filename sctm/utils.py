@@ -56,4 +56,4 @@ def precompute_SGC(data, n_layers, add_self_loops=True):
 
     # data["x"] = data.x
     data["sgc_x"] = torch.cat(sgc, dim=1)
-    return data
+    return data["sgc_x"]

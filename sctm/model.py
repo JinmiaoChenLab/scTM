@@ -13,7 +13,7 @@ EPS = 1e-8
 scale_init = math.log(0.01)
 
 
-class MLPEncoderDirichlet(pyro.nn.PyroModule):
+class MLPEncoderDirichlet(nn.Module):
     def __init__(
         self,
         n_genes,
@@ -53,7 +53,7 @@ class MLPEncoderDirichlet(pyro.nn.PyroModule):
         nn.init.xavier_uniform_(self.mu_topic.weight)
 
 
-class MLPEncoderMVN(pyro.nn.PyroModule):
+class MLPEncoderMVN(nn.Module):
     def __init__(
         self,
         n_genes,
@@ -115,7 +115,7 @@ class MLPEncoderMVN(pyro.nn.PyroModule):
         nn.init.zeros_(self.cov_factor.bias)
 
 
-# class BatchEncoder(pyro.nn.PyroModule):
+# class BatchEncoder(nn.Module):
 #     def __init__(self, n_genes, n_layers, n_batches):
 #         super().__init__()
 
@@ -145,7 +145,7 @@ class MLPEncoderMVN(pyro.nn.PyroModule):
 #         nn.init.xavier_uniform_(self.linear2.weight)
 
 
-class spatialLDAModel(pyro.nn.PyroModule):
+class spatialLDAModel(nn.Module):
     def __init__(
         self,
         n_genes,
@@ -212,7 +212,7 @@ class spatialLDAModel(pyro.nn.PyroModule):
                 d_aux = pyro.sample(
                     "d_aux",
                     dist.HalfNormal(
-                        torch.ones(self.n_batches, device=x.device) * 1
+                        torch.ones(self.n_batches, device=x.device)
                     ).to_event(0),
                 )
 
@@ -293,18 +293,17 @@ class spatialLDAModel(pyro.nn.PyroModule):
                 )
 
         with pyro.plate("batch", batch_size):
-            s = pyro.param("s", torch.zeros(1, device=x.device))
-            s = torch.sqrt(s.exp())
-
+            # s = pyro.param("s", torch.zeros(1, device=x.device))
+            # s = torch.sqrt(s.exp())
             if self.enc_distribution == "mvn":
                 z_topic_loc = x.new_zeros((batch_size, self.n_topics))
-                z_topic_scale = x.new_ones((batch_size, self.n_topics)) * s
+                z_topic_scale = x.new_ones((batch_size, self.n_topics))
                 with poutine.scale(scale=self.beta):
                     z_topic = pyro.sample(
                         "z_topic",
                         dist.Normal(z_topic_loc, z_topic_scale).to_event(1),
                     )
-                    z = torch.exp(F.log_softmax(z_topic, dim=1))
+                    z = torch.exp(F.log_softmax(z_topic, dim=-1))
             else:
                 with poutine.scale(scale=self.beta):
                     z_topic = pyro.sample(
@@ -320,7 +319,7 @@ class spatialLDAModel(pyro.nn.PyroModule):
 
             mean = torch.exp(
                 F.log_softmax(
-                    d + torch.log(z @ F.softmax(w + self.init_bg, dim=1)), dim=1
+                    d + torch.log(z @ F.softmax(w + self.init_bg, dim=-1)), dim=-1
                 )
             )
 
@@ -456,7 +455,7 @@ class spatialLDAModel(pyro.nn.PyroModule):
                         "z_topic",
                         dist.MultivariateNormal(z_loc, scale_tril=z_cov).to_event(0),
                     )
-                z_loc = F.softmax(z_loc, dim=1)
+                z_loc = F.softmax(z_loc, dim=-1)
             else:
                 z_loc = self.encoder(sgc_x)
 
@@ -471,7 +470,7 @@ class spatialLDAModel(pyro.nn.PyroModule):
             return pyro.param("w_loc").t(), pyro.param("w_scale").t()
         w = pyro.param("w_loc")
         if return_softmax:
-            w = F.softmax(w + self.init_bg, dim=1)
+            w = F.softmax(w + self.init_bg, dim=-1)
         return w.t()
 
     def predictive(self, num_samples):

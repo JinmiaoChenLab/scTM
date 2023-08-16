@@ -4,17 +4,14 @@ import numpy as np
 import pandas as pd
 import pyro
 import pyro.distributions as dist
-from pyro.infer import (
-    SVI,
-    TraceMeanField_ELBO,
-)
+from pyro.infer import SVI, TraceMeanField_ELBO
 from pyro.optim import AdamW
 import scipy
 import torch
 
 # from .data import choose_dataloader
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 from torch_geometric.data import Data
 from torch_geometric.utils import from_scipy_sparse_matrix
 from torch_sparse import SparseTensor
@@ -22,7 +19,7 @@ from torchinfo import summary
 from tqdm import tqdm
 
 # from torch_geometric.loader import RandomNodeSampler
-from .data import RandomNodeSampler
+# from .data import RandomNodeSampler
 from .metrics import get_metrics
 from .model import spatialLDAModel
 from .utils import (
@@ -92,7 +89,7 @@ class STAMP:
             adata, layer, categorical_covariate_keys, continous_covariate_keys
         )
 
-        self.model = spatialLDAModel(
+        model = spatialLDAModel(
             self.n_genes,
             self.hidden_size,
             self.n_topics,
@@ -104,6 +101,8 @@ class STAMP:
             self.enc_distribution,
             self.beta,
         )
+        self.model = model
+        # self.model = torch.compile(model)
 
         if verbose:
             print(summary(self.model))
@@ -160,6 +159,9 @@ class STAMP:
         if self.n_batches == 0:
             self.n_batches += 1
             data = Data(x=x, edge_index=edge_index, adj_t=adj)
+            sgc_x = precompute_SGC(data, n_layers=self.n_layers, add_self_loops=True)
+            dataset = TensorDataset(x, sgc_x)
+
         else:
             data = Data(
                 x=x,
@@ -167,19 +169,18 @@ class STAMP:
                 adj_t=adj,
                 st_batch=torch.cat(self.one_hot, dim=1),
             )
+            st_batch = torch.cat(self.one_hot, dim=1)
+            sgc_x = precompute_SGC(data, n_layers=self.n_layers, add_self_loops=True)
+            dataset = TensorDataset(x, sgc_x, st_batch)
+        # if self.batch_size >= self.n_cells:
 
-        data = precompute_SGC(data, n_layers=self.n_layers, add_self_loops=True)
-
-        if self.batch_size >= self.n_cells:
-            self.dataloader = DataLoader(
-                [data],
-                batch_size=1,
-            )
-
-        else:
-            self.dataloader = RandomNodeSampler(
-                data, batch_size=self.batch_size, shuffle=True, pin_memory=False
-            )
+        self.dataloader = DataLoader(
+            dataset, batch_size=self.batch_size, drop_last=True, shuffle=True
+        )
+        # else:
+        #     self.dataloader = RandomNodeSampler(
+        #         data, batch_size=self.batch_size, shuffle=True, pin_memory=False
+        #     )
         return data
 
     def train(
@@ -187,7 +188,7 @@ class STAMP:
         max_epochs=2000,
         learning_rate=0.003,
         device="cuda:0",
-        weight_decay=0.1,
+        weight_decay=0.01,
         early_stop=True,
         patience=20,
     ):
@@ -217,25 +218,34 @@ class STAMP:
 
         self.device = device
         self.model = self.model.to(device)
-        pbar = tqdm(range(max_epochs))
         avg_loss = np.Inf
         # tau_prev = 0.5 * torch.ones(self.n_genes, self.n_topics).to(device)
         # tau_prev.require_grad = False
         if early_stop:
             early_stopper = EarlyStopper(patience=patience)
+        # from pyro.infer.autoguide import AutoNorma
+
         svi = SVI(
-            self.model.model, self.model.guide, optimizer, loss=TraceMeanField_ELBO()
+            self.model.model,
+            self.model.guide,
+            optimizer,
+            loss=TraceMeanField_ELBO(),
         )
 
+        pbar = tqdm(range(max_epochs), position=0, leave=True)
         for epoch in pbar:
             losses = []
             # optimizer.zero_grad()
             for batch_idx, batch in enumerate(self.dataloader):
-                batch = batch.to(device)
+                # batch = batch.to(device)
                 if self.n_batches == 1:
-                    batch_loss = svi.step(batch.x, batch.sgc_x, None)
+                    batch_loss = svi.step(
+                        batch[0].to(device), batch[1].to(device), None
+                    )
                 else:
-                    batch_loss = svi.step(batch.x, batch.sgc_x, batch.st_batch)
+                    batch_loss = svi.step(
+                        batch[0].to(device), batch[1].to(device), batch[2].to(device)
+                    )
 
                 losses.append(float(batch_loss))
 
