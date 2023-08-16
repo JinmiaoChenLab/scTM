@@ -1,5 +1,5 @@
 ==========
-scTM
+scTM: $${\color{red}Red}$$  A pacakge for topic modelling for transcriptomics data
 ==========
 
 

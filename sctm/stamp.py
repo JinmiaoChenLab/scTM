@@ -92,19 +92,17 @@ class STAMP:
             adata, layer, categorical_covariate_keys, continous_covariate_keys
         )
 
-        self.model = torch.compile(
-            spatialLDAModel(
-                self.n_genes,
-                self.hidden_size,
-                self.n_topics,
-                self.dropout,
-                self.bg_init,
-                self.n_layers,
-                self.n_batches,
-                self.n_cells,
-                self.enc_distribution,
-                self.beta,
-            )
+        self.model = spatialLDAModel(
+            self.n_genes,
+            self.hidden_size,
+            self.n_topics,
+            self.dropout,
+            self.bg_init,
+            self.n_layers,
+            self.n_batches,
+            self.n_cells,
+            self.enc_distribution,
+            self.beta,
         )
 
         if verbose:
@@ -173,7 +171,10 @@ class STAMP:
         data = precompute_SGC(data, n_layers=self.n_layers, add_self_loops=True)
 
         if self.batch_size >= self.n_cells:
-            self.dataloader = DataLoader([data], batch_size=None)
+            self.dataloader = DataLoader(
+                [data],
+                batch_size=1,
+            )
 
         else:
             self.dataloader = RandomNodeSampler(

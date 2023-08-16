@@ -13,7 +13,7 @@ EPS = 1e-8
 scale_init = math.log(0.01)
 
 
-class MLPEncoderDirichlet(nn.Module):
+class MLPEncoderDirichlet(pyro.nn.PyroModule):
     def __init__(
         self,
         n_genes,
@@ -53,7 +53,7 @@ class MLPEncoderDirichlet(nn.Module):
         nn.init.xavier_uniform_(self.mu_topic.weight)
 
 
-class MLPEncoderMVN(nn.Module):
+class MLPEncoderMVN(pyro.nn.PyroModule):
     def __init__(
         self,
         n_genes,
@@ -115,7 +115,7 @@ class MLPEncoderMVN(nn.Module):
         nn.init.zeros_(self.cov_factor.bias)
 
 
-# class BatchEncoder(nn.Module):
+# class BatchEncoder(pyro.nn.PyroModule):
 #     def __init__(self, n_genes, n_layers, n_batches):
 #         super().__init__()
 
@@ -145,7 +145,7 @@ class MLPEncoderMVN(nn.Module):
 #         nn.init.xavier_uniform_(self.linear2.weight)
 
 
-class spatialLDAModel(nn.Module):
+class spatialLDAModel(pyro.nn.PyroModule):
     def __init__(
         self,
         n_genes,
@@ -256,13 +256,11 @@ class spatialLDAModel(nn.Module):
                         torch.ones(
                             (self.n_topics, self.n_genes),
                             device=x.device,
-                        )
-                        * 0.5,
+                        ),
                         torch.ones(
                             (self.n_topics, self.n_genes),
                             device=x.device,
-                        )
-                        * 0.5,
+                        ),
                     ).to_event(1),
                 )
                 # caux = caux.unsqueeze(-1).expand(self.n_topics, self.n_genes)
@@ -300,7 +298,7 @@ class spatialLDAModel(nn.Module):
 
             if self.enc_distribution == "mvn":
                 z_topic_loc = x.new_zeros((batch_size, self.n_topics))
-                z_topic_scale = x.new_ones((batch_size, self.n_topics))
+                z_topic_scale = x.new_ones((batch_size, self.n_topics)) * s
                 with poutine.scale(scale=self.beta):
                     z_topic = pyro.sample(
                         "z_topic",
