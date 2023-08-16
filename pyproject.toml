@@ -2,7 +2,7 @@
 [project]
 name = "scTM"
 version = "0.1.0"
-description = "single cell topic models"
+description = "A toolbox for single cell topic models"
 authors = [
     {name = "chengwei94", email = "chengwei8@gmail.com"},
 ]

@@ -1,10 +1,9 @@
-==========
-scTM: $${\color{red}Red}$$  A pacakge for topic modelling for transcriptomics data
-==========
-
+===========================================================
+scTM: A pacakge for topic modelling in transcriptomics data
+===========================================================
 
 .. image:: https://img.shields.io/pypi/v/sctm.svg
-        :target: https://pypi.python.org/pypi/sctm
+        :target: https://pypi.org/project/scTM
 
 
 .. image:: https://readthedocs.org/projects/sctm/badge/?version=latest
@@ -28,7 +27,7 @@ Features
 - STAMP: A spatially-aware dimensional reduction designed for spatial data.
 
 Minimal Installation
---------
+--------------------
 
 ``
 pip install scTM
@@ -44,7 +43,7 @@ pip install .
 ``
 
 Basic Usage
--------
+-----------
 To be added
 
 
