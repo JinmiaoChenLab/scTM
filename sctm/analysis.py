@@ -73,6 +73,20 @@ def get_topic_ora(beta, geneset, topics="all", topn_genes=20, n_jobs=20):
 
 
 def get_topic_disco(beta, topics="all", reference=None, topn_genes=20, ncores=20):
+    """_summary_
+
+    Args:
+        beta (_type_): Feature by topic returned by STAMP
+        topics (str, optional): Which topics to run disco on . Defaults to "all".
+        reference (_type_, optional): Reference to use. None sets to all reference.
+          Defaults to None.
+        topn_genes (int, optional): How many top genes to run analysis on.
+          Defaults to 20.
+        ncores (int, optional): Number of cores to use. Defaults to 20.
+
+    Returns:
+        _type_: A dictionary with the topics and top associated genesets
+    """
     if topics == "all":
         topics = beta.columns.tolist()
     elif not isinstance(topics, list):

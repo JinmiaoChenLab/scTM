@@ -9,9 +9,9 @@ pip install scTM
 Alternative installation for the latest version
 
 ``
-conda create --name sctm python=3.8 \
-git clone https://github.com/JinmiaoChenLab/scTM.git \
-conda activate sctm \
-cd scTM \
-pip install . \
+conda create --name sctm python=3.8
+git clone https://github.com/JinmiaoChenLab/scTM.git
+conda activate sctm
+cd scTM
+pip install .
 ``
