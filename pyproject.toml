@@ -1,7 +1,7 @@
 
 [project]
 name = "scTM"
-version = "0.1.0"
+version = "0.1.1"
 description = "A toolbox for single cell topic models"
 authors = [
     {name = "chengwei94", email = "chengwei8@gmail.com"},
@@ -15,8 +15,10 @@ dependencies = [
     "squidpy>=1.2.2",
     "torch>=2.0.1",
     "torchinfo>=1.8.0",
-#    "torch-sparse>=0.6.17",
-#    "torch-scatter>=2.1.1"
+    #    "torch-sparse>=0.6.17",
+    #    "torch-scatter>=2.1.1"
+    "discotoolkit>=1.0.0.1",
+    "scikit-misc>=0.2.0",
 ]
 requires-python = ">=3.8"
 readme = "README.rst"

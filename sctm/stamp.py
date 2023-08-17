@@ -14,7 +14,6 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 from torch_geometric.data import Data
 from torch_geometric.utils import from_scipy_sparse_matrix
-from torch_sparse import SparseTensor
 from torchinfo import summary
 from tqdm import tqdm
 
@@ -43,26 +42,29 @@ class STAMP:
         verbose=True,
         batch_size=1024,
         enc_distribution="mvn",
+        mode="sign",
         beta=1,
     ):
-        """_summary_
+        """Initialize model
 
         Args:
             adata (_type_): AnnData  object
             n_topics (int, optional): Number of topics to model. Defaults to 10.
-            n_layers (int, optional): _description_. Defaults to 1.
+            n_layers (int, optional): Number of layers to do SGC. Defaults to 1.
             hidden_size (int, optional):  Number of nodes in the hidden layer of the
                 encoder. Defaults to 50.
-            layer (_type_, optional): Layer where the counts data are stored. Defaults
-                to None.
+            layer (_type_, optional): Layer where the counts data are stored. X is used
+            if None. Defaults to None.
             dropout (float, optional): Dropout used for the encoder. Defaults to 0.2.
-            batch_key (_type_, optional): Location of batch in obs where the batch
-                information is stored. Defaults to None.
+            categorical_covariate_keys (_type_, optional): Categorical batch keys
+            continous_covariate_keys (_type_, optional): Continous bathc key
             verbose (bool, optional): Print out information on the model. Defaults to
                 True.
             batch_size (int, optional): Batch size. Defaults to 1024.
             enc_distribution (str, optional): Encoder distribution. Choices are
                 multivariate normal. Defaults to "mvn".
+            mode (str, optional): sign vs sgc(simplified graph convolutions).
+            sgc leads to smoother topics. Defaults to "sign".
             beta (float, optional): Beta as in Beta-VAE. Defaults to 1.
         """
         pyro.clear_param_store()
@@ -81,6 +83,7 @@ class STAMP:
         self.batch_size = batch_size
         self.enc_distribution = enc_distribution
         self.beta = beta
+        self.mode = mode
 
         bg = get_init_bg(check_layer(adata, layer))
         self.bg_init = torch.from_numpy(bg)
@@ -115,17 +118,17 @@ class STAMP:
             if "spatial_connectivities" not in adata.obsp.keys():
                 raise KeyError("spatial_connectivities not found")
 
-            adj = SparseTensor.from_scipy(
-                adata.obsp["spatial_connectivities"]
-                + scipy.sparse.identity(n=x_numpy.shape[0])
-            )
-            adj = adj.t()
+            # adj = SparseTensor.from_scipy(
+            #     adata.obsp["spatial_connectivities"]
+            #     + scipy.sparse.identity(n=x_numpy.shape[0])
+            # )
+            # adj = adj.t()
             edge_index = from_scipy_sparse_matrix(
                 adata.obsp["spatial_connectivities"]
                 + scipy.sparse.identity(n=x_numpy.shape[0])
             )[0]
         else:
-            adj = None
+            # adj = None
             edge_index = None
 
         self.n_batches = 0
@@ -158,19 +161,19 @@ class STAMP:
 
         if self.n_batches == 0:
             self.n_batches += 1
-            data = Data(x=x, edge_index=edge_index, adj_t=adj)
-            sgc_x = precompute_SGC(data, n_layers=self.n_layers, add_self_loops=True)
+            data = Data(x=x, edge_index=edge_index)  # , adj_t=adj)
+            sgc_x = precompute_SGC(data, n_layers=self.n_layers, mode=self.mode)
             dataset = TensorDataset(x, sgc_x)
 
         else:
             data = Data(
                 x=x,
                 edge_index=edge_index,
-                adj_t=adj,
+                # adj_t=adj,
                 st_batch=torch.cat(self.one_hot, dim=1),
             )
             st_batch = torch.cat(self.one_hot, dim=1)
-            sgc_x = precompute_SGC(data, n_layers=self.n_layers, add_self_loops=True)
+            sgc_x = precompute_SGC(data, n_layers=self.n_layers, mode=self.mode)
             dataset = TensorDataset(x, sgc_x, st_batch)
         # if self.batch_size >= self.n_cells:
 
@@ -186,9 +189,9 @@ class STAMP:
     def train(
         self,
         max_epochs=2000,
-        learning_rate=0.003,
+        learning_rate=0.01,
         device="cuda:0",
-        weight_decay=0.01,
+        weight_decay=0.1,
         early_stop=True,
         patience=20,
     ):
@@ -364,8 +367,8 @@ class STAMP:
             device (str, optional): Which device to use. Defaults to "cpu".
             num_samples (int, optional): Number of samples to use for calculation.
               Defaults to 1000.
-            pct (float, optional): ??? . Defaults to 0.5.
-            return_softmax (bool, optional): ???. Defaults to False.
+            pct (float, optional): Depreciated . Defaults to 0.5.
+            return_softmax (bool, optional): Depreciated. Defaults to False.
 
         Returns:
             _type_: _description_

@@ -21,7 +21,7 @@ for path in sorted(Path("sctm").rglob("*.py")):
     elif parts[-1] == "__main__":
         continue
 
-    if parts[-1] == "stamp":
+    if parts[-1] in ["analysis", "pl", "pp", "stamp"]:
         nav[parts] = doc_path.as_posix()  #
     else:
         continue
@@ -33,5 +33,4 @@ for path in sorted(Path("sctm").rglob("*.py")):
     mkdocs_gen_files.set_edit_path(full_doc_path, path)
 
 with mkdocs_gen_files.open("api/SUMMARY.md", "w") as nav_file:  #
-    print("opened")
     nav_file.writelines(nav.build_literate_nav())  #

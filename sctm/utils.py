@@ -28,8 +28,7 @@ def get_init_bg(data):
     return np.log(means + 1e-8)
 
 
-def precompute_SGC(data, n_layers, add_self_loops=True):
-
+def precompute_SGC(data, n_layers, mode="sign"):
     if n_layers >= 1:
         row, col = data.edge_index
         N = data.num_nodes
@@ -49,11 +48,16 @@ def precompute_SGC(data, n_layers, add_self_loops=True):
     xs = data.x
     xs = torch.log(xs + 1)
     sgc = [xs]
-    for i in range(n_layers):
-        # xs = matmul(edge_index, xs, reduce="add")
-        xs = adj_t @ sgc[-1]
-        sgc.append(xs)
-
+    if mode == "sign":
+        for i in range(n_layers):
+            # xs = matmul(edge_index, xs, reduce="add")
+            xs = adj_t @ sgc[-1]
+            sgc.append(xs)
+        data["sgc_x"] = torch.cat(sgc, dim=1)
+    else:
+        for i in range(n_layers):
+            xs = adj_t @ sgc[-1]
+            sgc.append(xs)
+        data["sgc_x"] = sgc[-1]
     # data["x"] = data.x
-    data["sgc_x"] = torch.cat(sgc, dim=1)
     return data["sgc_x"]

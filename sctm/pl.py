@@ -1,12 +1,15 @@
 import anndata as ad
 import scanpy as sc
 import matplotlib.pyplot as plt
-import textwrap
+
+# import textwrap
 import numpy as np
 from matplotlib.axes import Axes
-import pandas as pd
+
+# import pandas as pd
 from matplotlib.patches import Patch
-import seaborn as sns
+
+# import seaborn as sns
 from matplotlib import rcParams
 import matplotlib as mpl
 
@@ -16,7 +19,7 @@ from matplotlib.colors import ListedColormap
 from matplotlib.gridspec import GridSpec
 
 # from upsetplot import plot, from_contents
-from itertools import chain
+# from itertools import chain
 
 
 from scanpy._utils import _empty, Empty
@@ -55,14 +58,26 @@ def heatmap_topic(adata, groupby=None, topics=None, figsize=(10, 5), cmap=None):
 def heatmap(
     adata,
     topic_prop,
-    groupby=None,
-    figsize=(10, 5),
+    groupby,
     dendrogram=False,
     swap_axes=True,
     cmap=None,
+    figsize=(10, 5),
     save=None,
     **kwargs,
 ):
+    """Creates a heatmap of cell(grouped by groupby) by topics
+
+    Args:
+        adata (_type_): Adata object
+        topic_prop (_type_): Topic proportions returned by STAMP
+        groupby (_type_, optional): Column in adata object to arrange the cells
+        figsize (tuple, optional): Figsize. Defaults to (10, 5).
+        dendrogram (bool, optional): Whether to cluster. Defaults to False.
+        swap_axes (bool, optional): Whether to swap x and y axis. Defaults to True.
+        cmap (_type_, optional): What matplotib cmap to use. Defaults to None.
+        save (_type_, optional): Whether to save the object. Defaults to None.
+    """
     topic_adata = ad.AnnData(topic_prop)
     topic_adata.obs[groupby] = adata.obs[groupby]
 
@@ -82,13 +97,26 @@ def heatmap(
 def matrixplot(
     adata,
     topic_prop,
-    groupby=None,
-    figsize=(10, 5),
+    groupby,
     dendrogram=False,
     swap_axes=True,
     cmap=None,
+    figsize=(10, 5),
     save=None,
+    **kwargs,
 ):
+    """Creates a matrixplot of cell(grouped by groupby) by topics
+
+    Args:
+        adata (_type_): Adata object
+        topic_prop (_type_): Topic proportions returned by STAMP
+        groupby (_type_, optional): Column in adata object to arrange the cells
+        figsize (tuple, optional): Figsize. Defaults to (10, 5).
+        dendrogram (bool, optional): Whether to cluster. Defaults to False.
+        swap_axes (bool, optional): Whether to swap x and y axis. Defaults to True.
+        cmap (_type_, optional): What matplotib cmap to use. Defaults to None.
+        save (_type_, optional): Whether to save the object. Defaults to None.
+    """
 
     topic_adata = ad.AnnData(topic_prop)
     topic_adata.obs[groupby] = adata.obs[groupby]
@@ -104,17 +132,29 @@ def matrixplot(
     )
 
 
-def tracksplot(
+def trackplot(
     adata,
     topic_prop,
-    groupby=None,
-    figsize=(10, 5),
+    groupby,
     dendrogram=False,
     swap_axes=True,
     cmap=None,
+    figsize=(10, 5),
     save=None,
+    **kwargs,
 ):
+    """Creates a trackplot of cell(grouped by groupby) by topics
 
+    Args:
+        adata (_type_): Adata object
+        topic_prop (_type_): Topic proportions returned by STAMP
+        groupby (_type_, optional): Column in adata object to arrange the cells
+        figsize (tuple, optional): Figsize. Defaults to (10, 5).
+        dendrogram (bool, optional): Whether to cluster. Defaults to False.
+        swap_axes (bool, optional): Whether to swap x and y axis. Defaults to True.
+        cmap (_type_, optional): What matplotib cmap to use. Defaults to None.
+        save (_type_, optional): Whether to save the object. Defaults to None.
+    """
     topic_adata = ad.AnnData(topic_prop)
     topic_adata.obs[groupby] = adata.obs[groupby]
 
@@ -130,296 +170,296 @@ def tracksplot(
     )
 
 
-def clustermap(
-    beta,
-    gene_dict=None,
-    topn_genes=20,
-    xticklabels="auto",
-    yticklabels="auto",
-    figsize=(10, 6),
-    cmap="viridis",
-    fontsize=5,
-    row_cluster=False,
-    col_cluster=True,
-    standard_scale=0,
-    transpose=False,
-    return_fig=False,
-):
-    if gene_dict is None:
-        genes = []
-        topics = beta.columns
-        for i in topics:
-            genes.append(beta.nlargest(topn_genes, i).index.tolist())
-        genes = list(set(list(chain.from_iterable(genes))))
-        beta_sub = beta.loc[genes, :]
-    else:
-        genes = [x for x in gene_dict.values()]
-        genes = list(chain.from_iterable(genes))
-        beta_sub = beta.loc[genes, :]
+# def clustermap(
+#     beta,
+#     gene_dict=None,
+#     topn_genes=20,
+#     xticklabels="auto",
+#     yticklabels="auto",
+#     figsize=(10, 6),
+#     cmap="viridis",
+#     fontsize=5,
+#     row_cluster=False,
+#     col_cluster=True,
+#     standard_scale=0,
+#     transpose=False,
+#     return_fig=False,
+# ):
+#     if gene_dict is None:
+#         genes = []
+#         topics = beta.columns
+#         for i in topics:
+#             genes.append(beta.nlargest(topn_genes, i).index.tolist())
+#         genes = list(set(list(chain.from_iterable(genes))))
+#         beta_sub = beta.loc[genes, :]
+#     else:
+#         genes = [x for x in gene_dict.values()]
+#         genes = list(chain.from_iterable(genes))
+#         beta_sub = beta.loc[genes, :]
 
-    if transpose:
-        beta_sub = beta_sub.transpose()
+#     if transpose:
+#         beta_sub = beta_sub.transpose()
 
-    fig = sns.clustermap(
-        beta_sub,
-        cmap=cmap,
-        figsize=figsize,
-        row_cluster=row_cluster,
-        col_cluster=col_cluster,
-        standard_scale=standard_scale,
-        xticklabels=xticklabels,
-        yticklabels=yticklabels,
-    )
+#     fig = sns.clustermap(
+#         beta_sub,
+#         cmap=cmap,
+#         figsize=figsize,
+#         row_cluster=row_cluster,
+#         col_cluster=col_cluster,
+#         standard_scale=standard_scale,
+#         xticklabels=xticklabels,
+#         yticklabels=yticklabels,
+#     )
 
-    fig.fig.subplots_adjust(right=0.7)
-    fig.ax_cbar.set_position((0.8, 0.4, 0.01, 0.3))
+#     fig.fig.subplots_adjust(right=0.7)
+#     fig.ax_cbar.set_position((0.8, 0.4, 0.01, 0.3))
 
-    fig.ax_heatmap.set_yticklabels(
-        fig.ax_heatmap.get_ymajorticklabels(), fontsize=fontsize, rotation=0
-    )
+#     fig.ax_heatmap.set_yticklabels(
+#         fig.ax_heatmap.get_ymajorticklabels(), fontsize=fontsize, rotation=0
+#     )
 
-    # fig.ax_row_dendrogram.set_visible(False) #suppress row dendrogram
-    # fig.ax_col_dendrogram.set_visible(False) #suppress column dendrogram
+#     # fig.ax_row_dendrogram.set_visible(False) #suppress row dendrogram
+#     # fig.ax_col_dendrogram.set_visible(False) #suppress column dendrogram
 
-    if return_fig:
-        fig = fig.fig
-        return fig
-
-
-def heatmap_topic_correlation(
-    topic_prop,
-    spatial_connectivities=None,
-    return_values=False,
-    figsize=(8, 6),
-    cmap="viridis",
-    fontsize=8,
-):
-    fig, ax = plt.subplots(figsize=figsize)
-
-    if spatial_connectivities is None:
-        corr = topic_prop.corr()
-        sns.heatmap(
-            corr,
-            annot=True,
-            vmin=-1,
-            vmax=1,
-            cmap=cmap,
-            ax=ax,
-            annot_kws={"fontsize": fontsize},
-            fmt=".2f",
-        )
-    else:
-        spatial_topic_prop = spatial_connectivities @ topic_prop
-        spatial_topic_prop = pd.DataFrame(
-            spatial_topic_prop, index=topic_prop.index, columns=topic_prop.columns
-        )
-        corr = spatial_topic_prop.corr()
-        sns.heatmap(
-            corr,
-            annot=True,
-            vmin=-1,
-            vmax=1,
-            cmap=cmap,
-            ax=ax,
-            annot_kws={"fontsize": fontsize},
-            fmt=".2f",
-        )
-    if return_values:
-        return corr
-    else:
-        return ax
+#     if return_fig:
+#         fig = fig.fig
+#         return fig
 
 
-def enrichment_barplot(
-    enrichments,
-    topic,
-    type="enrichr",
-    figsize=(10, 5),
-    n_enrichments=5,
-    qval_cutoff=0.05,
-    title="auto",
-):
-    if type == "enrichr":
-        if title == "auto":
-            title = enrichments[topic]["Gene_set"][0]
-        enrichment = enrichments[topic]
-        enrichment = enrichment.loc[enrichment["Adjusted P-value"] < qval_cutoff, :]
-        enrichment = enrichment.sort_values("Adjusted P-value")
-        enrichment = enrichment.iloc[:n_enrichments, :]
+# def heatmap_topic_correlation(
+#     topic_prop,
+#     spatial_connectivities=None,
+#     return_values=False,
+#     figsize=(8, 6),
+#     cmap="viridis",
+#     fontsize=8,
+# ):
+#     fig, ax = plt.subplots(figsize=figsize)
 
-        fig, ax = plt.subplots(figsize=figsize)
-        ax.barh(
-            y=enrichment["Term"],
-            width=-np.log(enrichment["Adjusted P-value"]),
-            fill="blue",
-            align="center",
-        )
-
-        ax.set_yticklabels(
-            [textwrap.fill(term, 24) for term in enrichment["Term"].values]
-        )
-
-        ax.set_xlabel("- Log Adjusted P-value")
-        ax.set_title(title)
-
-        ax.invert_yaxis()
-
-        plt.tight_layout()
-        return ax
-
-    if type == "gsea":
-        if title == "auto":
-            title = enrichments[topic]["Name"][0]
-
-        enrichment = enrichments[topic]
-        enrichment = enrichment.loc[enrichment["NOM p-val"] < qval_cutoff, :]
-        enrichment = enrichment[enrichment["NES"] > 0]
-        enrichment = enrichment.sort_values("NES", ascending=False)
-        enrichment["Term"] = enrichment["Term"].str.replace("_", " ")
-        enrichment = enrichment.iloc[:n_enrichments, :]
-
-        enrichment["-log_qval"] = -np.log(
-            enrichment["FDR q-val"].astype("float") + 1e-7
-        )
-
-        fig, ax = plt.subplots(figsize=figsize)
-
-        ax.barh(y=enrichment["Term"], width=enrichment["NES"], align="center")
-
-        ax.set_xlabel("NES")
-        ax.set_title(title)
-
-        ax.set_yticklabels(
-            [textwrap.fill(term, 24) for term in enrichment["Term"].values]
-        )
-
-        ax.invert_yaxis()
-        plt.tight_layout()
-
-        return ax
+#     if spatial_connectivities is None:
+#         corr = topic_prop.corr()
+#         sns.heatmap(
+#             corr,
+#             annot=True,
+#             vmin=-1,
+#             vmax=1,
+#             cmap=cmap,
+#             ax=ax,
+#             annot_kws={"fontsize": fontsize},
+#             fmt=".2f",
+#         )
+#     else:
+#         spatial_topic_prop = spatial_connectivities @ topic_prop
+#         spatial_topic_prop = pd.DataFrame(
+#             spatial_topic_prop, index=topic_prop.index, columns=topic_prop.columns
+#         )
+#         corr = spatial_topic_prop.corr()
+#         sns.heatmap(
+#             corr,
+#             annot=True,
+#             vmin=-1,
+#             vmax=1,
+#             cmap=cmap,
+#             ax=ax,
+#             annot_kws={"fontsize": fontsize},
+#             fmt=".2f",
+#         )
+#     if return_values:
+#         return corr
+#     else:
+#         return ax
 
 
-def enrichment_dotplot(
-    enrichment,
-    type="enrichr",
-    figsize=(10, 5),
-    n_enrichments=10,
-    title="auto",
-    cmap=None,
-):
-    fig, ax = plt.subplots(figsize=figsize)
+# def enrichment_barplot(
+#     enrichments,
+#     topic,
+#     type="enrichr",
+#     figsize=(10, 5),
+#     n_enrichments=5,
+#     qval_cutoff=0.05,
+#     title="auto",
+# ):
+#     if type == "enrichr":
+#         if title == "auto":
+#             title = enrichments[topic]["Gene_set"][0]
+#         enrichment = enrichments[topic]
+#         enrichment = enrichment.loc[enrichment["Adjusted P-value"] < qval_cutoff, :]
+#         enrichment = enrichment.sort_values("Adjusted P-value")
+#         enrichment = enrichment.iloc[:n_enrichments, :]
 
-    if type == "enrichr":
-        # enrichment = enrichments[topic].copy()
-        # enrichment = enrichment.loc[enrichment["Adjusted P-value"] < qval_cutoff, :]
+#         fig, ax = plt.subplots(figsize=figsize)
+#         ax.barh(
+#             y=enrichment["Term"],
+#             width=-np.log(enrichment["Adjusted P-value"]),
+#             fill="blue",
+#             align="center",
+#         )
 
-        enrichment["gene_size"] = enrichment["Overlap"].str.split("/").str[1]
-        enrichment["-log_qval"] = -np.log(enrichment["Adjusted P-value"])
-        enrichment["gene_ratio"] = enrichment["Overlap"].str.split("/").str[0].astype(
-            "int"
-        ) / enrichment["Overlap"].str.split("/").str[1].astype("int")
+#         ax.set_yticklabels(
+#             [textwrap.fill(term, 24) for term in enrichment["Term"].values]
+#         )
 
-        if enrichment.shape[0] < n_enrichments:
-            n_enrichments = enrichment.shape[0]
+#         ax.set_xlabel("- Log Adjusted P-value")
+#         ax.set_title(title)
 
-        enrichment = enrichment.sort_values("gene_ratio")
-        enrichment = enrichment.iloc[:n_enrichments, :]
+#         ax.invert_yaxis()
 
-        scatter = ax.scatter(
-            x=enrichment["gene_ratio"].values,
-            y=enrichment["Term"].values,
-            s=enrichment["gene_size"].values.astype("int"),
-            c=enrichment["Combined Score"].values,
-            cmap=cmap,
-        )
-        ax.set_xlabel("Gene Ratio")
+#         plt.tight_layout()
+#         return ax
 
-        legend1 = ax.legend(
-            *scatter.legend_elements(prop="sizes", num=5),
-            bbox_to_anchor=(1.04, 1),
-            loc="upper left",
-            title="Geneset Size",
-            labelspacing=1,
-            borderpad=1,
-        )
-        ax.legend(
-            *scatter.legend_elements(prop="colors", num=5),
-            bbox_to_anchor=(1.04, 0),
-            loc="lower left",
-            title="Combined Score",
-            labelspacing=1,
-            borderpad=1,
-        )
+#     if type == "gsea":
+#         if title == "auto":
+#             title = enrichments[topic]["Name"][0]
 
-        ax.add_artist(legend1)
-        # ax.add_artist(legend2)
+#         enrichment = enrichments[topic]
+#         enrichment = enrichment.loc[enrichment["NOM p-val"] < qval_cutoff, :]
+#         enrichment = enrichment[enrichment["NES"] > 0]
+#         enrichment = enrichment.sort_values("NES", ascending=False)
+#         enrichment["Term"] = enrichment["Term"].str.replace("_", " ")
+#         enrichment = enrichment.iloc[:n_enrichments, :]
 
-        ax.set_yticklabels(
-            [textwrap.fill(term, 24) for term in enrichment["Term"].values]
-        )
+#         enrichment["-log_qval"] = -np.log(
+#             enrichment["FDR q-val"].astype("float") + 1e-7
+#         )
 
-        if title == "auto":
-            ax.set_title(enrichment["Gene_set"].values[0])
+#         fig, ax = plt.subplots(figsize=figsize)
 
-    if type == "gsea":
-        # enrichment = enrichments[topic].copy()
-        # enrichment = enrichment.loc[enrichment["FDR q-val"] < qval_cutoff, :]
+#         ax.barh(y=enrichment["Term"], width=enrichment["NES"], align="center")
 
-        enrichment["gene_size"] = enrichment["Tag %"].str.split("/").str[1]
-        enrichment["-log_qval"] = -np.log(
-            enrichment["FDR q-val"].astype("float") + 1e-7
-        )
-        enrichment["gene_ratio"] = enrichment["Tag %"].str.split("/").str[0].astype(
-            "int"
-        ) / enrichment["Tag %"].str.split("/").str[1].astype("int")
+#         ax.set_xlabel("NES")
+#         ax.set_title(title)
 
-        if enrichment.shape[0] < n_enrichments:
-            n_enrichments = enrichment.shape[0]
+#         ax.set_yticklabels(
+#             [textwrap.fill(term, 24) for term in enrichment["Term"].values]
+#         )
 
-        enrichment = enrichment.sort_values("-log_qval", ascending=False)
-        enrichment = enrichment.iloc[:n_enrichments, :]
+#         ax.invert_yaxis()
+#         plt.tight_layout()
 
-        scatter = ax.scatter(
-            x=enrichment["-log_qval"].values,
-            y=enrichment["Term"].values,
-            s=enrichment["gene_ratio"].values.astype("float"),
-            c=enrichment["NES"].values,
-            cmap=cmap,
-        )
-        ax.set_xlabel("-log q_val")
+#         return ax
 
-        legend1 = ax.legend(
-            *scatter.legend_elements(prop="sizes", num=5),
-            bbox_to_anchor=(1, 1),
-            loc="upper left",
-            title="Gene Ratio",
-            labelspacing=1,
-            borderpad=1,
-        )
 
-        ax.legend(
-            *scatter.legend_elements(prop="colors", num=5),
-            bbox_to_anchor=(1, 0),
-            loc="lower left",
-            title="NES",
-            labelspacing=1,
-            borderpad=1,
-        )
+# def enrichment_dotplot(
+#     enrichment,
+#     type="enrichr",
+#     figsize=(10, 5),
+#     n_enrichments=10,
+#     title="auto",
+#     cmap=None,
+# ):
+#     fig, ax = plt.subplots(figsize=figsize)
 
-        ax.add_artist(legend1)
-        # ax.add_artist(legend2)
+#     if type == "enrichr":
+#         # enrichment = enrichments[topic].copy()
+#         # enrichment = enrichment.loc[enrichment["Adjusted P-value"] < qval_cutoff, :]
 
-        ax.set_yticklabels(
-            [textwrap.fill(term, 30) for term in enrichment["Term"].values]
-        )
+#         enrichment["gene_size"] = enrichment["Overlap"].str.split("/").str[1]
+#         enrichment["-log_qval"] = -np.log(enrichment["Adjusted P-value"])
+#         enrichment["gene_ratio"] = enrichment["Overlap"].str.split("/").str[0].astype(
+#             "int"
+#         ) / enrichment["Overlap"].str.split("/").str[1].astype("int")
 
-        if title == "auto":
-            ax.set_title(enrichment["Name"].values[0])
+#         if enrichment.shape[0] < n_enrichments:
+#             n_enrichments = enrichment.shape[0]
 
-        ax.invert_yaxis()
-        plt.tight_layout()
+#         enrichment = enrichment.sort_values("gene_ratio")
+#         enrichment = enrichment.iloc[:n_enrichments, :]
 
-        return ax
+#         scatter = ax.scatter(
+#             x=enrichment["gene_ratio"].values,
+#             y=enrichment["Term"].values,
+#             s=enrichment["gene_size"].values.astype("int"),
+#             c=enrichment["Combined Score"].values,
+#             cmap=cmap,
+#         )
+#         ax.set_xlabel("Gene Ratio")
+
+#         legend1 = ax.legend(
+#             *scatter.legend_elements(prop="sizes", num=5),
+#             bbox_to_anchor=(1.04, 1),
+#             loc="upper left",
+#             title="Geneset Size",
+#             labelspacing=1,
+#             borderpad=1,
+#         )
+#         ax.legend(
+#             *scatter.legend_elements(prop="colors", num=5),
+#             bbox_to_anchor=(1.04, 0),
+#             loc="lower left",
+#             title="Combined Score",
+#             labelspacing=1,
+#             borderpad=1,
+#         )
+
+#         ax.add_artist(legend1)
+#         # ax.add_artist(legend2)
+
+#         ax.set_yticklabels(
+#             [textwrap.fill(term, 24) for term in enrichment["Term"].values]
+#         )
+
+#         if title == "auto":
+#             ax.set_title(enrichment["Gene_set"].values[0])
+
+#     if type == "gsea":
+#         # enrichment = enrichments[topic].copy()
+#         # enrichment = enrichment.loc[enrichment["FDR q-val"] < qval_cutoff, :]
+
+#         enrichment["gene_size"] = enrichment["Tag %"].str.split("/").str[1]
+#         enrichment["-log_qval"] = -np.log(
+#             enrichment["FDR q-val"].astype("float") + 1e-7
+#         )
+#         enrichment["gene_ratio"] = enrichment["Tag %"].str.split("/").str[0].astype(
+#             "int"
+#         ) / enrichment["Tag %"].str.split("/").str[1].astype("int")
+
+#         if enrichment.shape[0] < n_enrichments:
+#             n_enrichments = enrichment.shape[0]
+
+#         enrichment = enrichment.sort_values("-log_qval", ascending=False)
+#         enrichment = enrichment.iloc[:n_enrichments, :]
+
+#         scatter = ax.scatter(
+#             x=enrichment["-log_qval"].values,
+#             y=enrichment["Term"].values,
+#             s=enrichment["gene_ratio"].values.astype("float"),
+#             c=enrichment["NES"].values,
+#             cmap=cmap,
+#         )
+#         ax.set_xlabel("-log q_val")
+
+#         legend1 = ax.legend(
+#             *scatter.legend_elements(prop="sizes", num=5),
+#             bbox_to_anchor=(1, 1),
+#             loc="upper left",
+#             title="Gene Ratio",
+#             labelspacing=1,
+#             borderpad=1,
+#         )
+
+#         ax.legend(
+#             *scatter.legend_elements(prop="colors", num=5),
+#             bbox_to_anchor=(1, 0),
+#             loc="lower left",
+#             title="NES",
+#             labelspacing=1,
+#             borderpad=1,
+#         )
+
+#         ax.add_artist(legend1)
+#         # ax.add_artist(legend2)
+
+#         ax.set_yticklabels(
+#             [textwrap.fill(term, 30) for term in enrichment["Term"].values]
+#         )
+
+#         if title == "auto":
+#             ax.set_title(enrichment["Name"].values[0])
+
+#         ax.invert_yaxis()
+#         plt.tight_layout()
+
+#         return ax
 
 
 def draw_pie(dist, xpos, ypos, size, colors, figsize, ax=None):
@@ -473,47 +513,34 @@ def spatialpie(
     legend=True,
     figsize=None,
     title=None,
-    **kwargs,
 ) -> Union[Axes, List[Axes], None]:
-    """
-    Scatter plot in spatial coordinates.
-    This function allows overlaying data on top of images.
-    Use the parameter `img_key` to see the image in the background
-    And the parameter `library_id` to select the image.
-    By default, `'hires'` and `'lowres'` are attempted.
-    Use `crop_coord`, `alpha_img`, and `bw` to control how it is displayed.
-    Use `size` to scale the size of the Visium spots plotted on top.
-    As this function is designed to for imaging data, there are two key assumptions
-    about how coordinates are handled:
-    1. The origin (e.g `(0, 0)`) is at the top left – as is common convention
-    with image data.
-    2. Coordinates are in the pixel space of the source image, so an equal
-    aspect ratio is assumed.
-    If your anndata object has a `"spatial"` entry in `.uns`, the `img_key`
-    and `library_id` parameters to find values for `img`, `scale_factor`,
-    and `spot_size` arguments. Alternatively, these values be passed directly.
-    Parameters
-    ----------
-    {adata_color_etc}
-    {scatter_spatial}
-    {scatter_bulk}
-    {show_save_ax}
-    Returns
-    -------
-    If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
-    Examples
-    --------
-    This function behaves very similarly to other embedding plots like
-    :func:`~scanpy.pl.umap`
-    >>> adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
-    >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
-    >>> sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
-    See Also
-    --------
-    :func:`scanpy.datasets.visium_sge`
-        Example visium data.
-    :tutorial:`spatial/basic-analysis`
-        Tutorial on spatial analysis.
+    """Creates a spatialpie plot of object. Very ugly according to twitter.
+
+    Args:
+        adata (_type_): Adata object
+        topic_prop (_type_): Return
+        basis (str, optional): Basis to use. Defaults to "spatial".
+        img (Union[np.ndarray, None], optional): _description_. Defaults to None.
+        img_key (Union[str, None, Empty], optional): _description_. Defaults to _empty.
+        library_id (Union[str, Empty], optional): _description_. Defaults to _empty.
+        crop_coord (Tuple[int, int, int, int], optional): _description_.
+        Defaults to None.
+        alpha_img (float, optional): _description_. Defaults to 1.0.
+        bw (Optional[bool], optional): _description_. Defaults to False.
+        frameon (bool, optional): _description_. Defaults to False.
+        size (float, optional): _description_. Defaults to 1.0.
+        scale_factor (Optional[float], optional): _description_. Defaults to None.
+        spot_size (Optional[float], optional): _description_. Defaults to None.
+        na_color (Optional[ColorLike], optional): _description_. Defaults to None.
+        show (Optional[bool], optional): _description_. Defaults to None.
+        return_fig (Optional[bool], optional): _description_. Defaults to None.
+        cmap (str, optional): _description_. Defaults to "tab20".
+        legend (bool, optional): _description_. Defaults to True.
+        figsize (_type_, optional): _description_. Defaults to None.
+        title (_type_, optional): _description_. Defaults to None.
+
+    Returns:
+        Union[Axes, List[Axes], None]: _description_
     """
     # get default image params if available
     library_id, spatial_data = _check_spatial_data(adata.uns, library_id)
@@ -745,52 +772,6 @@ def plot_spatial_general(
     image_cmap="Greys_r",
     white_spacing=20,
 ):
-    r"""Plot spatial abundance of cell types (regulatory programmes) with colour
-    gradient and interpolation.
-
-      This method supports only 7 cell types with these colours (in order, which can be
-      changed using reorder_cmap).
-      'yellow' 'orange' 'blue' 'green' 'purple' 'grey' 'white'
-
-    :param value_df: pd.DataFrame - with cell abundance or other features (only 7
-    allowed, columns) across locations (rows)
-    :param coords: np.ndarray - x and y coordinates (in columns) to be used for
-    ploting spots
-    :param text: pd.DataFrame - with x, y coordinates, text to be printed
-    :param circle_diameter: diameter of circles
-    :param labels: list of strings, labels of cell types
-    :param alpha_scaling: adjust color alpha
-    :param max_col: crops the colorscale maximum value for each column in value_df.
-    :param max_color_quantile: crops the colorscale at x quantile of the data.
-    :param show_img: show image?
-    :param img: numpy array representing a tissue image.
-        If not provided a black background image is used.
-    :param img_alpha: transparency of the image
-    :param lim: x and y max limits on the plot. Minimum is always set to 0, if `lim` is
-    None maximum
-        is set to image height and width. If 'no_limit' then no limit is set.
-    :param adjust_text: move text label to prevent overlap
-    :param plt_axis: show axes?
-    :param axis_y_flipped: flip y axis to match coordinates of the plotted image
-    :param reorder_cmap: reorder colors to make sure you get the right color for each
-    category
-
-    :param style: plot style (matplolib.style.context):
-        'fast' - white background & dark text;
-        'dark_background' - black background & white text;
-
-    :param colorbar_position: 'bottom', 'right' or None
-    :param colorbar_label_kw: dict that will be forwarded to ax.set_label()
-    :param colorbar_shape: dict {'vertical_gaps': 1.5, 'horizontal_gaps': 1.5,
-                                    'width': 0.2, 'height': 0.2}, not obligatory to
-                                    contain all params
-    :param colorbar_tick_size: colorbar ticks label size
-    :param colorbar_grid: tuple of colorbar grid (rows, columns)
-    :param image_cmap: matplotlib colormap for grayscale image
-    :param white_spacing: percent of colorbars to be hidden
-
-    """
-
     if value_df.shape[1] > 7:
         raise ValueError(
             "Maximum of 7 cell types / factors can be plotted at the moment"
@@ -1033,9 +1014,9 @@ def plot_spatial_general(
 def plot_spatial(
     adata,
     topic_prop,
+    basis="spatial",
     bw=False,
     img=None,
-    basis="spatial",
     library_id=_empty,
     crop_coord=None,
     img_key=_empty,
@@ -1048,14 +1029,15 @@ def plot_spatial(
     figsize=(10, 10),
     **kwargs,
 ):
-    """_summary_
+    """Plot taken from cell2location at https://github.com/BayraktarLab/cell2location.
+    Able to display zeros and also on umap through the basis function
 
     Args:
         adata (_type_): Adata object with spatial coordinates in adata.obsm['spatial']
         topic_prop (_type_): Topic proportion obtained from STAMP.
-        bw (bool, optional): bw(currently depreciated). Defaults to False.
+        basis (str, optional): Which basis to plot in adata.obsm. Defaults to "spatial".
+        bw (bool, optional): Defaults to False.
         img (_type_, optional): . Defaults to None.
-        basis (str, optional): _description_. Defaults to "spatial".
         library_id (_type_, optional): _description_. Defaults to _empty.
         crop_coord (_type_, optional): _description_. Defaults to None.
         img_key (_type_, optional): _description_. Defaults to _empty.
@@ -1065,7 +1047,7 @@ def plot_spatial(
         scale_default (float, optional): _description_. Defaults to 0.5.
         show_img (bool, optional): Whether to display spatial image. Sets to false
         automatically when displaying umap. Defaults to True.
-        display_zeros (bool, optional): Whether to display cells that have low
+        display_zeros (bool, optional): Whether to display cells that have low counts
         values to grey colour. Defaults to False.
         figsize (tuple, optional): Figsize of image. Defaults to (10, 10).
 
