@@ -81,7 +81,7 @@ def heatmap(
     topic_adata = ad.AnnData(topic_prop)
     topic_adata.obs[groupby] = adata.obs[groupby]
 
-    sc.pl.heatmap(
+    fig = sc.pl.heatmap(
         adata=topic_adata,
         var_names=topic_prop.columns,
         groupby=groupby,
@@ -89,9 +89,11 @@ def heatmap(
         dendrogram=dendrogram,
         swap_axes=swap_axes,
         cmap=cmap,
-        save=save,
+        save=False,
+        # show=False,
         **kwargs,
     )
+    return fig
 
 
 def matrixplot(

@@ -36,10 +36,10 @@ class STAMP:
         n_layers=1,
         hidden_size=50,
         layer=None,
-        dropout=0.0,
+        dropout=0.1,
         categorical_covariate_keys=None,
         continous_covariate_keys=None,
-        verbose=True,
+        verbose=False,
         batch_size=1024,
         enc_distribution="mvn",
         mode="sign",
@@ -92,13 +92,16 @@ class STAMP:
             adata, layer, categorical_covariate_keys, continous_covariate_keys
         )
 
+        if mode == "sgc":
+            n_layers = 0
+
         model = spatialLDAModel(
             self.n_genes,
             self.hidden_size,
             self.n_topics,
             self.dropout,
             self.bg_init,
-            self.n_layers,
+            n_layers,
             self.n_batches,
             self.n_cells,
             self.enc_distribution,
@@ -178,7 +181,7 @@ class STAMP:
         # if self.batch_size >= self.n_cells:
 
         self.dataloader = DataLoader(
-            dataset, batch_size=self.batch_size, drop_last=True, shuffle=True
+            dataset, batch_size=self.batch_size, drop_last=False, shuffle=True
         )
         # else:
         #     self.dataloader = RandomNodeSampler(
@@ -188,7 +191,7 @@ class STAMP:
 
     def train(
         self,
-        max_epochs=2000,
+        max_epochs=1000,
         learning_rate=0.01,
         device="cuda:0",
         weight_decay=0.1,
@@ -227,7 +230,6 @@ class STAMP:
         if early_stop:
             early_stopper = EarlyStopper(patience=patience)
         # from pyro.infer.autoguide import AutoNorma
-
         svi = SVI(
             self.model.model,
             self.model.guide,

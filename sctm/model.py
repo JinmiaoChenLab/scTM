@@ -9,7 +9,6 @@ from pyro import poutine
 from pyro.infer import Predictive
 from torch.distributions.utils import broadcast_all
 
-EPS = 1e-8
 scale_init = math.log(0.01)
 
 
@@ -31,9 +30,7 @@ class MLPEncoderDirichlet(nn.Module):
 
         self.linear = nn.Linear(n_genes * (n_layers + 1), hidden_size)
         self.mu_topic = nn.Linear(hidden_size, n_topics)
-        self.norm_topic = nn.BatchNorm1d(
-            n_topics, affine=False, track_running_stats=False
-        )
+        self.norm_topic = nn.BatchNorm1d(n_topics, affine=False)
 
         self.reset_parameters()
 
@@ -49,8 +46,8 @@ class MLPEncoderDirichlet(nn.Module):
         return concent
 
     def reset_parameters(self):
-        nn.init.xavier_uniform_(self.linear.weight)
-        nn.init.xavier_uniform_(self.mu_topic.weight)
+        nn.init.xavier_normal_(self.linear.weight)
+        nn.init.xavier_normal_(self.mu_topic.weight)
 
 
 class MLPEncoderMVN(nn.Module):
@@ -68,36 +65,65 @@ class MLPEncoderMVN(nn.Module):
 
         self.n_topics = n_topics
         self.hidden_size = hidden_size
+        self.n_batches = n_batches
+
+        if n_batches == 1:
+            n_batches = 0
 
         self.drop = nn.Dropout(dropout)
         self.bn_pp = nn.BatchNorm1d(n_genes * (n_layers + 1))
         self.bn = nn.BatchNorm1d(hidden_size)
-        self.norm_topic = nn.BatchNorm1d(
-            n_topics, affine=False, track_running_stats=False
-        )
-
-        self.mu_topic = nn.Linear(hidden_size, n_topics)
-        self.diag_topic = nn.Linear(hidden_size, n_topics)
+        # self.bn_pp = nn.LayerNorm(n_genes * (n_layers + 1))
+        # self.bn = nn.LayerNorm(hidden_size)
+        # if n_batches <= 1:
+        self.norm_topic = nn.BatchNorm1d(n_topics, affine=False)
+        # else:
+        #     self.norm_topic = nn.ModuleList(
+        #         [
+        #             nn.BatchNorm1d(n_topics, affine=False, track_running_stats=False)
+        #             for _ in range(n_batches)
+        #         ]
+        #     )
+        self.mu_topic = nn.Linear(hidden_size + n_batches, n_topics)
+        self.diag_topic = nn.Linear(hidden_size + n_batches, n_topics)
         self.k = int(self.n_topics * (self.n_topics - 1) / 2)
 
-        self.cov_factor = nn.Linear(hidden_size, self.k)
+        self.cov_factor = nn.Linear(hidden_size + n_batches, self.k)
         self.linear = nn.Linear(n_genes * (n_layers + 1), hidden_size)
 
         self.reset_parameters()
 
-    def forward(self, x):
+    def forward(self, x, ys):
         x = self.drop(x)
         x = self.bn_pp(x)
         x = self.linear(x)
-        x = F.relu(self.bn(x))
+        # x = self.bn(x)
         # x = self.drop(x)
         # x = F.relu(x)
+        # x = self.mu_topic(x)
+        # if ys is None:
+        # mu_topic = self.mu_topic(x)
+        # mu_topic = self.norm_topic(x)
+        # else:
+        #     batch = ys.argmax(axis=1)
+        #     mu_topic = torch.zeros(x.shape[0], self.n_topics, device=x.device)
+        #     for i in range(self.n_batches):
+        #         indices = torch.where(batch==i)[0]
+        #         if len(indices) > 1:
+        #             mu_topic[indices] = self.norm_topic[i](mu_topic_[indices])
+        #         elif len(indices) == 1:
+        #             mu_topic[indices] = mu_topic_[indices]
 
+        x = F.relu(self.bn(x))
+        if ys is not None:
+            x = torch.cat([x, ys], dim=1)
         mu_topic = self.mu_topic(x)
         mu_topic = self.norm_topic(mu_topic)
-
+        # x = self.bn(F.relu(x))
+        # x = F.relu(x)
+        # x = self.bn(x)
         diag_topic = self.diag_topic(x)
-        diag_topic = torch.sqrt(diag_topic.exp())
+        diag_topic = F.softplus(diag_topic)
         cov_factor = self.cov_factor(x)
         indices = torch.tril_indices(row=self.n_topics, col=self.n_topics, offset=-1)
 
@@ -113,6 +139,9 @@ class MLPEncoderMVN(nn.Module):
         nn.init.zeros_(self.diag_topic.weight)
         nn.init.zeros_(self.cov_factor.weight)
         nn.init.zeros_(self.cov_factor.bias)
+        nn.init.zeros_(self.linear.bias)
+        nn.init.zeros_(self.mu_topic.bias)
+        nn.init.zeros_(self.diag_topic.bias)
 
 
 # class BatchEncoder(nn.Module):
@@ -211,7 +240,7 @@ class spatialLDAModel(nn.Module):
             with pyro.plate("covariates", self.n_batches):
                 d_aux = pyro.sample(
                     "d_aux",
-                    dist.HalfNormal(
+                    dist.HalfCauchy(
                         torch.ones(self.n_batches, device=x.device)
                     ).to_event(0),
                 )
@@ -292,16 +321,26 @@ class spatialLDAModel(nn.Module):
                     ).to_event(1),
                 )
 
+                # z_topic_mu = pyro.sample(
+                #     "z_topic_mu",
+                #     dist.Normal(torhch.zeros(self.n_topics, device=x.device),
+                #                 torch.ones(self.n_topics, device=x.device)),
+                # )
+                # z_topic_diag = pyro.sample(
+                #     "z_topic_diag",
+                #     dist.HalfNormal(torch.ones(1, device=x.device) * 5),
+                # )
+
         with pyro.plate("batch", batch_size):
-            # s = pyro.param("s", torch.zeros(1, device=x.device))
-            # s = torch.sqrt(s.exp())
+
             if self.enc_distribution == "mvn":
-                z_topic_loc = x.new_zeros((batch_size, self.n_topics))
-                z_topic_scale = x.new_ones((batch_size, self.n_topics))
                 with poutine.scale(scale=self.beta):
+                    z_topic_mu = torch.zeros(self.n_topics, device=x.device)
+                    z_topic_diag = torch.ones(self.n_topics, device=x.device)
+
                     z_topic = pyro.sample(
                         "z_topic",
-                        dist.Normal(z_topic_loc, z_topic_scale).to_event(1),
+                        dist.Normal(z_topic_mu, z_topic_diag).to_event(1),
                     )
                     z = torch.exp(F.log_softmax(z_topic, dim=-1))
             else:
@@ -317,12 +356,12 @@ class spatialLDAModel(nn.Module):
             if ys is not None:
                 d = ys @ d
 
+            # mean = torch.exp(F.log_softmax(d + z @ (w + self.init_bg), dim = -1))
             mean = torch.exp(
                 F.log_softmax(
                     d + torch.log(z @ F.softmax(w + self.init_bg, dim=-1)), dim=-1
                 )
             )
-
             rate = 1 / disp
             mean, rate = broadcast_all(mean, rate)
             mean = ls * mean
@@ -447,9 +486,50 @@ class spatialLDAModel(nn.Module):
                 w_scale = torch.sqrt(torch.exp(w_scale))
                 pyro.sample("w", dist.Normal(w_loc, w_scale).to_event(1))
 
+                # z_topic_mu_loc = pyro.param(
+                #     "z_topic_mu_loc", torch.zeros(1, device=x.device)
+                # )
+                # z_topic_mu_scale = pyro.param(
+                #     "z_topic_mu_scale", torch.ones(1, device=x.device) * scale_init
+                # )
+                # z_topic_mu_scale = torch.sqrt(z_topic_mu_scale.exp())
+                # pyro.sample(
+                #     "z_topic_mu",
+                #     dist.Normal(z_topic_mu_loc, z_topic_mu_scale),
+                # )
+                # z_topic_mu_loc = pyro.param(
+                #     "z_topic_mu_loc",
+                #     torch.zeros(self.n_topics, device=x.device),
+                # )
+                # z_topic_mu_scale = pyro.param(
+                #     "z_topic_mu_scale",
+                #     torch.ones(self.n_topics, device=x.device) * scale_init,
+                # )
+                # z_topic_mu_scale = torch.sqrt(z_topic_mu_scale.exp())
+
+                # pyro.sample(
+                #     "z_topic_mu",
+                #     dist.Normal(z_topic_mu_loc, z_topic_mu_scale),
+                # )
+
+                # z_topic_diag_loc = pyro.param(
+                #     "z_topic_diag_loc",
+                #     torch.zeros(1, device=x.device),
+                # )
+                # z_topic_diag_scale = pyro.param(
+                #     "z_topic_diag_scale",
+                #     torch.ones(1, device=x.device) * scale_init,
+                # )
+                # z_topic_diag_scale = torch.sqrt(z_topic_diag_scale.exp())
+
+                # pyro.sample(
+                #     "z_topic_diag",
+                #     dist.LogNormal(z_topic_diag_loc, z_topic_diag_scale),
+                # )
+
         with pyro.plate("batch", batch_size):
             if self.enc_distribution == "mvn":
-                z_loc, z_cov = self.encoder(sgc_x)
+                z_loc, z_cov = self.encoder(sgc_x, ys)
                 with poutine.scale(scale=self.beta):
                     pyro.sample(
                         "z_topic",

@@ -29,6 +29,7 @@ def get_init_bg(data):
 
 
 def precompute_SGC(data, n_layers, mode="sign"):
+
     if n_layers >= 1:
         row, col = data.edge_index
         N = data.num_nodes
