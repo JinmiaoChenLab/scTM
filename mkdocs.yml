@@ -14,6 +14,8 @@ nav:
     - STAMP breast cancer and cell/phenotype inference with DISCO signatures: notebooks/stamp/example1.ipynb
     - STAMP joint mouse brain Visium: notebooks/stamp/example2.ipynb
     - STAMP lung cancer SMI: notebooks/stamp/example3.ipynb
+    - STAMP Multi Technolgy Mouse olfactory bulb: notebooks/stamp/example4.ipynb
+    - STAMP Time series Mouse embryo: notebooks/stamp/example4.ipynb
   # - 💡 Background:
   #   - Intro to Topquic Models: examples/intro_to_topicmodel.py
   - 📕 Reference: api/
