@@ -1,41 +1,40 @@
+from typing import (
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
+
 import anndata as ad
-import scanpy as sc
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 # import textwrap
 import numpy as np
-from matplotlib.axes import Axes
-
-# import pandas as pd
-from matplotlib.patches import Patch
+import scanpy as sc
 
 # import seaborn as sns
 from matplotlib import rcParams
-import matplotlib as mpl
+from matplotlib.axes import Axes
 
 # import matplotlib.pyplot as plt
 # import numpy as np
 from matplotlib.colors import ListedColormap
 from matplotlib.gridspec import GridSpec
 
+# import pandas as pd
+from matplotlib.patches import Patch
+
 # from upsetplot import plot, from_contents
 # from itertools import chain
-
-
-from scanpy._utils import _empty, Empty
+from scanpy._utils import Empty, _empty
 from scanpy.pl._tools.scatterplots import (
-    _check_spatial_data,
-    _check_img,
-    _check_spot_size,
-    _check_scale_factor,
     _check_crop_coord,
+    _check_img,
     _check_na_color,
-)
-from typing import (
-    Union,
-    Optional,
-    List,
-    Tuple,
+    _check_scale_factor,
+    _check_spatial_data,
+    _check_spot_size,
 )
 from scanpy.pl._utils import (
     ColorLike,
@@ -467,27 +466,27 @@ def trackplot(
 def draw_pie(dist, xpos, ypos, size, colors, figsize, ax=None):
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
-
     # for incremental pie slices
+
     cumsum = np.cumsum(dist)
+    # normalize
     cumsum = cumsum / cumsum[-1]
     pie = [0] + cumsum.tolist()
     c = 0
     for r1, r2 in zip(pie[:-1], pie[1:]):
-        # if r2 - r1 > 0.01:
-        angles = np.linspace(2 * np.pi * r1, 2 * np.pi * r2, num=10)
-        x = [0] + np.cos(angles).tolist() + [0]
-        y = [0] + np.sin(angles).tolist() + [0]
-
-        xy = np.column_stack([x, y])
-        # print(xy.shape)
-        ax.plot(
-            [xpos],
-            [ypos],
-            marker=xy,
-            markersize=np.abs(xy).max() * np.array(np.sqrt(size)),
-            c=colors[c],
-        )
+        if r2 - r1 > 0.01:
+            angles = np.linspace(2 * np.pi * r1, 2 * np.pi * r2, num=100)
+            x = [0] + np.cos(angles).tolist() + [0]
+            y = [0] + np.sin(angles).tolist() + [0]
+            xy = np.column_stack([x, y])
+            # print(xy.shape)
+            ax.plot(
+                [xpos],
+                [ypos],
+                marker=xy,
+                markersize=np.abs(xy).max() * np.array(np.sqrt(size)),
+                c=colors[c],
+            )
         c += 1
 
     return ax
@@ -495,7 +494,8 @@ def draw_pie(dist, xpos, ypos, size, colors, figsize, ax=None):
 
 def spatialpie(
     adata,
-    topic_prop,
+    color,
+    N=2,
     *,
     basis: str = "spatial",
     img: Union[np.ndarray, None] = None,
@@ -566,8 +566,12 @@ def spatialpie(
 
     if figsize is None:
         figsize = (rcParams["figure.figsize"][0], rcParams["figure.figsize"][1])
-    topic_names = topic_prop.columns
-    topic_prop = topic_prop.to_numpy()
+
+    topic_prop = adata.obs[color]
+    topic_prop = topic_prop.mask(
+        topic_prop.rank(axis=1, method="min", ascending=False) > N, 0
+    )
+    topic_prop = topic_prop.values
 
     n_cells = topic_prop.shape[0]
     axs = None
@@ -581,9 +585,7 @@ def spatialpie(
         if (n % 20000) == 0:
             print(f"{i} number of cells done")
         axs = draw_pie(
-            topic_prop[
-                i,
-            ],
+            topic_prop[i,],
             xpos=spatial_coords[i, 0] * scale_factor,
             ypos=spatial_coords[i, 1] * scale_factor,
             figsize=figsize,
@@ -594,9 +596,9 @@ def spatialpie(
 
     if legend:
         legend_elements = []
-        for i in range(len(topic_names)):
+        for i in range(len(colors)):
             legend_elements.append(
-                Patch(facecolor=colors[i], edgecolor="w", label=topic_names[i])
+                Patch(facecolor=colors[i], edgecolor="w", label=color[i])
             )
 
         axs.legend(
@@ -1087,5 +1089,68 @@ def plot_spatial(
         display_zeros=display_zeros,
         **kwargs,
     )  # cell abundance values
+    plt.gca().invert_yaxis()
 
     return fig
+
+
+def spatial(
+    adata,
+    color=None,
+    cmap=None,
+    frameon=None,
+    title=None,
+    wspace=None,
+    hspace=0.25,
+    palette=None,
+    colorbar_loc="right",
+    size=1,
+    basis="spatial",
+    vmax=None,
+    ncols=4,
+    layer=None,
+    show=True,
+    *args,
+    **kwargs,
+):
+    """A faster simple function that uses sc.pl.embedding to plot for non-visium data
+    so it dont take too long. ~sleep. Very inflexible.
+
+    Args:
+        adata (_type_): Annotated data matrix.
+        color (_type_): Keys for annotations of observations/cells or variables/genes
+        size (int, optional): size of spots. Defaults to 1.
+        basis (str, optional): basis in obsm. Defaults to "spatial".
+        vmax (str, optional): The value representing the upper limit of the color scale. Defaults to "p99".
+        show (bool, optional): Show the plot, do not return axis. Defaults to True.
+
+    Returns:
+        _type_: A plot
+    """
+    ax = sc.pl.embedding(
+        adata,
+        basis=basis,
+        show=False,
+        color=color,
+        wspace=wspace,
+        hspace=hspace,
+        palette=palette,
+        vmax=vmax,
+        size=size,
+        ncols=ncols,
+        cmap=cmap,
+        frameon=frameon,
+        colorbar_loc=colorbar_loc,
+        title=title,
+        layer=layer,
+        *args,
+        **kwargs,
+    )
+    if isinstance(ax, list):
+        [axs.invert_yaxis() for axs in ax]
+        [axs.set_aspect("equal") for axs in ax]
+    else:
+        ax.invert_yaxis()
+        ax.set_aspect("equal")
+    if show is False:
+        return ax

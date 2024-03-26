@@ -3,28 +3,31 @@
 import numpy as np
 import pandas as pd
 import pyro
-import pyro.distributions as dist
-from pyro.infer import SVI, TraceMeanField_ELBO
-from pyro.optim import AdamW
-import scipy
 import torch
 
 # from .data import choose_dataloader
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, TensorDataset
-from torch_geometric.data import Data
-from torch_geometric.utils import from_scipy_sparse_matrix
+from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO
+from pyro.optim import AdamW
+from sklearn.metrics import mean_poisson_deviance
+from sklearn.preprocessing import minmax_scale
+from torch.utils.data import DataLoader, TensorDataset, WeightedRandomSampler
+
+# from torch_geometric.utils import from_scipy_sparse_matrix
 from torchinfo import summary
 from tqdm import tqdm
+
+from .data import DictDataset
 
 # from torch_geometric.loader import RandomNodeSampler
 # from .data import RandomNodeSampler
 from .metrics import get_metrics
 from .model import spatialLDAModel
 from .utils import (
-    check_layer,
     get_init_bg,
-    precompute_SGC,
+    make_sparse_tensor,
+    precompute_SGC_scipy,
+    sparsify,
 )
 
 
@@ -34,16 +37,18 @@ class STAMP:
         adata,
         n_topics=20,
         n_layers=1,
-        hidden_size=50,
+        hidden_size=128,
         layer=None,
-        dropout=0.1,
+        dropout=0.0,
+        train_size=1,
+        rank=None,
         categorical_covariate_keys=None,
         continous_covariate_keys=None,
-        verbose=False,
-        batch_size=1024,
+        time_covariate_keys=None,
         enc_distribution="mvn",
+        gene_likelihood="nb",
         mode="sign",
-        beta=1,
+        verbose=False,
     ):
         """Initialize model
 
@@ -55,7 +60,7 @@ class STAMP:
                 encoder. Defaults to 50.
             layer (_type_, optional): Layer where the counts data are stored. X is used
             if None. Defaults to None.
-            dropout (float, optional): Dropout used for the encoder. Defaults to 0.2.
+            dropout (float, optional): Dropout used for the encoder. Defaults to 0.0.
             categorical_covariate_keys (_type_, optional): Categorical batch keys
             continous_covariate_keys (_type_, optional): Continous bathc key
             verbose (bool, optional): Print out information on the model. Defaults to
@@ -69,141 +74,208 @@ class STAMP:
         """
         pyro.clear_param_store()
 
+        self.time_covariate_keys = time_covariate_keys
         self.continous_covariate_keys = continous_covariate_keys
         self.categorical_covariate_keys = categorical_covariate_keys
-        self.hidden_size = hidden_size
         self.n_topics = n_topics
         self.adata = adata
-        self.n_cells = adata.shape[0]
-        self.n_genes = adata.shape[1]
+        self.n_obs = adata.shape[0]
+        self.n_features = adata.shape[1]
         self.hidden_size = hidden_size
         self.dropout = dropout
         self.n_layers = n_layers
         self.layer = layer
-        self.batch_size = batch_size
         self.enc_distribution = enc_distribution
-        self.beta = beta
+        self.gene_likelihood = gene_likelihood
         self.mode = mode
+        self.gp_inputs = None
+        if rank is None:
+            self.rank = self.n_topics
+        else:
+            self.rank = rank
 
-        bg = get_init_bg(check_layer(adata, layer))
-        self.bg_init = torch.from_numpy(bg)
+        # if self.time_covariate_codes is not None:
+        #     if adata.obs[time_covariate_keys].dtype != "float32":
+        #         raise ValueError("Please convert time mincovariate keys to float32
 
-        self.data = self.setup(
-            adata, layer, categorical_covariate_keys, continous_covariate_keys
-        )
+        self.setup(adata, layer, categorical_covariate_keys, continous_covariate_keys)
+
+        if train_size != 1:
+            self.train_indices = np.random.choice(
+                self.n_obs, size=round(train_size * self.n_obs), replace=False
+            )
+        else:
+            self.train_indices = np.arange(self.n_obs)
+
+        self.train_dataset = DictDataset(self.dataset[self.train_indices])
+        self.n_train = len(self.train_dataset)
+        self.test_indices = np.setdiff1d(np.arange(self.n_obs), self.train_indices)
+        self.test_dataset = DictDataset(self.dataset[self.test_indices])
+
+        if self.n_time >= 2:
+            self.init_bg_mean = []
+            for i in range(self.n_time):
+                indices = np.where(
+                    self.train_dataset.tensor_dict["time_covariate_codes"] == i
+                )
+                self.init_bg_mean.append(
+                    get_init_bg(self.train_dataset.tensor_dict["x"][indices])
+                )
+            self.init_bg_mean = torch.vstack(self.init_bg_mean)
+            self.init_bg_mean = self.init_bg_mean.permute(1, 0)
+            # self.init_bg_mean = get_init_bg(self.train_dataset.tensor_dict["x"])
+            # self.init_bg_mean = self.init_bg_mean[:, None].expand(-1, self.n_time)
+
+        else:
+            self.init_bg_mean = get_init_bg(self.train_dataset.tensor_dict["x"])
+
+        # self.init_beta = nmf_init(adata, layer=layer, n_topics=n_topics)
 
         if mode == "sgc":
-            n_layers = 0
+            self.n_layers = 0
 
         model = spatialLDAModel(
-            self.n_genes,
+            self.n_features,
             self.hidden_size,
             self.n_topics,
             self.dropout,
-            self.bg_init,
-            n_layers,
+            self.init_bg_mean,
+            self.n_layers,
             self.n_batches,
-            self.n_cells,
+            self.n_train,
             self.enc_distribution,
-            self.beta,
+            self.gene_likelihood,
+            self.n_time,
+            self.gp_inputs,
+            self.rank,
+            # self.pseudo_inputs
         )
+        # self.model = model
         self.model = model
-        # self.model = torch.compile(model)
 
         if verbose:
             print(summary(self.model))
 
     def setup(self, adata, layer, categorical_covariate_keys, continous_covariate_keys):
-        x_numpy = check_layer(adata, layer)
-        x = torch.from_numpy(x_numpy)
+        x = sparsify(adata, layer)
+        self.x = make_sparse_tensor(x).to_dense()
+
+        # create a dataframe to track
+        self.df = self.adata.obs.copy()
 
         if self.n_layers >= 1:
-            if "spatial_connectivities" not in adata.obsp.keys():
+            if "spatial_connectivities" not in adata.obsp:
                 raise KeyError("spatial_connectivities not found")
 
-            # adj = SparseTensor.from_scipy(
-            #     adata.obsp["spatial_connectivities"]
-            #     + scipy.sparse.identity(n=x_numpy.shape[0])
-            # )
-            # adj = adj.t()
-            edge_index = from_scipy_sparse_matrix(
-                adata.obsp["spatial_connectivities"]
-                + scipy.sparse.identity(n=x_numpy.shape[0])
-            )[0]
-        else:
-            # adj = None
-            edge_index = None
+            self.adj = adata.obsp["spatial_connectivities"]
 
         self.n_batches = 0
-        self.one_hot = []
+        self.n_time = 0
+
         if categorical_covariate_keys is not None:
             if not isinstance(categorical_covariate_keys, list):
                 raise ValueError("categorical_covariate_keys must be a list.")
 
             for categorical_covariate_key in categorical_covariate_keys:
-                self.batch_series = adata.obs[categorical_covariate_key].astype(
+                categorical_covariate = adata.obs[categorical_covariate_key].astype(
                     "category"
                 )
-                self.n_batches += self.batch_series.nunique()
-                batch_factorize, _ = pd.factorize(self.batch_series)
-                self.batch_factorize = torch.from_numpy(batch_factorize)
-                self.one_hot.append(F.one_hot(self.batch_factorize).float())
+                self.n_batches += categorical_covariate.nunique()
+                (
+                    categorical_covariate_codes,
+                    categorical_covariate_uniques,
+                ) = pd.factorize(categorical_covariate)
+                self.df["categorical_covariate"] = categorical_covariate_codes
+                self.df["categorical_covariate"] = self.df[
+                    "categorical_covariate"
+                ].astype("category")
+                self.categorical_covariate_codes = torch.from_numpy(
+                    categorical_covariate_codes
+                )
+                # self.one_hot.append(F.one_hot(self.batch_factorize).float())
 
         if continous_covariate_keys is not None:
             if not isinstance(continous_covariate_keys, list):
                 raise ValueError("continous_covariate_keys must be a list.")
 
             for continous_covariate_key in continous_covariate_keys:
-                self.batch_series = adata.obs[continous_covariate_key].astype("float32")
-                self.batch_series = (
-                    self.batch_series - self.batch_series.mean()
-                ) / self.batch_series.std()
+                continous_covariate_codes = adata.obs[continous_covariate_key].astype(
+                    "float32"
+                )
+                continous_covariate_codes = (
+                    continous_covariate_codes - continous_covariate_codes.mean()
+                ) / continous_covariate_codes.std()
                 self.n_batches += 1
-                self.batch_factorize = torch.from_numpy(self.batch_series.values)
-                self.one_hot.append(self.batch_factorize.float().reshape(-1, 1))
+                self.continous_covariate_codes = torch.from_numpy(
+                    continous_covariate_codes
+                )
+                # self.one_hot.append(self.batch_factorize.float().reshape(-1, 1))
 
+        # If no batch
         if self.n_batches == 0:
-            self.n_batches += 1
-            data = Data(x=x, edge_index=edge_index)  # , adj_t=adj)
-            sgc_x = precompute_SGC(data, n_layers=self.n_layers, mode=self.mode)
-            dataset = TensorDataset(x, sgc_x)
-
-        else:
-            data = Data(
-                x=x,
-                edge_index=edge_index,
-                # adj_t=adj,
-                st_batch=torch.cat(self.one_hot, dim=1),
+            self.df["categorical_covariate"] = 0
+            self.categorical_covariate_codes = torch.from_numpy(
+                self.df["categorical_covariate"].values
             )
-            st_batch = torch.cat(self.one_hot, dim=1)
-            sgc_x = precompute_SGC(data, n_layers=self.n_layers, mode=self.mode)
-            dataset = TensorDataset(x, sgc_x, st_batch)
-        # if self.batch_size >= self.n_cells:
+            self.df["categorical_covariate"] = self.df["categorical_covariate"].astype(
+                "category"
+            )
+            self.n_batches += 1
 
-        self.dataloader = DataLoader(
-            dataset, batch_size=self.batch_size, drop_last=False, shuffle=True
+        if self.time_covariate_keys is not None:
+            time_covariate = adata.obs[self.time_covariate_keys]
+            time_covariate_codes, time_covariate_unique = pd.factorize(
+                time_covariate, sort=True
+            )
+
+            self.df["time_covariate"] = time_covariate_unique[time_covariate_codes]
+            self.df["time_covariate"] = self.df["time_covariate"].astype("category")
+            self.time_covariate_codes = torch.from_numpy(time_covariate_codes)
+            self.gp_inputs = np.array(time_covariate_unique)
+            # self.gp_inputs = self.gp_inputs - self.gp_inputs.min()
+            self.gp_inputs = minmax_scale(self.gp_inputs)
+            self.gp_inputs = torch.from_numpy(self.gp_inputs)
+            self.n_time = len(time_covariate_unique)
+            self.n_batches = 1
+
+        self.sgc_x = precompute_SGC_scipy(
+            self.x, self.adj, n_layers=self.n_layers, mode=self.mode
         )
-        # else:
-        #     self.dataloader = RandomNodeSampler(
-        #         data, batch_size=self.batch_size, shuffle=True, pin_memory=False
-        #     )
-        return data
+
+        self.inputs = {}
+        self.inputs["x"] = self.x
+        self.inputs["sgc_x"] = self.sgc_x
+        # self.inputs["adj_sparse"] = self.adj_sparse
+        self.inputs["categorical_covariate_codes"] = self.categorical_covariate_codes
+        self.inputs["sample_idx"] = np.arange(self.n_obs)
+
+        if self.time_covariate_keys is not None:
+            self.inputs["time_covariate_codes"] = self.time_covariate_codes
+        self.dataset = DictDataset(self.inputs)
 
     def train(
         self,
-        max_epochs=1000,
+        max_epochs=800,
+        min_epochs=100,
         learning_rate=0.01,
         device="cuda:0",
-        weight_decay=0.1,
+        batch_size=256,
+        sampler="R",
+        weight_decay=0,
+        iterations_to_anneal=1,
+        min_kl=1,
+        max_kl=1,
         early_stop=True,
-        patience=20,
+        patience=10,
+        shuffle=True,
+        num_particles=1,
     ):
         """Training the data
 
         Args:
             max_epochs (int, optional): Maximum number of epochs to run.
                 Defaults to 2000.
-            learning_rate (float, optional): Learning rate of AdamW optimizer.
+            learning_rate (float, optional): Learning rate of AdamW optimi er.
                 Defaults to 0.01.
             device (str, optional): Which device to run model on. Use "cpu"
                 to run on cpu and cuda to run on gpu. Defaults to "cuda:0".
@@ -217,54 +289,130 @@ class STAMP:
 
         # adam_args = {"lr":learning_rate, "weight_decay":weight_decay, "clip_norm": 1}
         # optimizer = ClippedAdam(adam_args)
+        self.iterations_to_anneal = iterations_to_anneal
+        self.min_kl = min_kl
+        self.max_kl = max_kl
+        self.batch_size = batch_size
+
+        # if min_epochs is None:
+        #     min_epochs = math.ceil(
+        #         self.iterations_to_anneal * batch_size / self.n_train
+        #     )
+        if sampler == "R":
+            self.dataloader = DataLoader(
+                self.train_dataset,
+                batch_size=batch_size,
+                drop_last=False,
+                shuffle=shuffle,
+            )
+        elif sampler == "W":
+            if self.time_covariate_keys is not None:
+                counts = torch.unique(
+                    self.train_dataset.tensor_dict["time_covariate_codes"],
+                    return_counts=True,
+                )[1]
+                weights = 1 / counts
+                weights = weights[
+                    self.train_dataset.tensor_dict["time_covariate_codes"]
+                ]
+                sampler = WeightedRandomSampler(
+                    weights, num_samples=len(self.train_indices)
+                )
+                self.dataloader = DataLoader(
+                    self.train_dataset, batch_size=batch_size, sampler=sampler
+                )
+
+            elif self.categorical_covariate_keys is not None:
+                counts = torch.unique(
+                    self.train_dataset.tensor_dict["categorical_covariate_codes"],
+                    return_counts=True,
+                )[1]
+                weights = 1 / counts
+                weights = weights[
+                    self.train_dataset.tensor_dict["categorical_covariate_codes"]
+                ]
+                sampler = WeightedRandomSampler(
+                    weights, num_samples=len(self.train_indices)
+                )
+                self.dataloader = DataLoader(
+                    self.train_dataset, batch_size=batch_size, sampler=sampler
+                )
+
+        else:
+            raise ValueError("Only R(random) amd W(weighted) samplers are suppported")
+
         optimizer = AdamW(
-            {"lr": learning_rate, "weight_decay": weight_decay},
-            clip_args={"clip_norm": 1},
+            optim_args={
+                "lr": learning_rate,
+                "weight_decay": weight_decay,
+                "betas": (0.9, 0.999),
+            },
+            clip_args={"clip_norm": 10},
         )
 
         self.device = device
         self.model = self.model.to(device)
+
         avg_loss = np.Inf
-        # tau_prev = 0.5 * torch.ones(self.n_genes, self.n_topics).to(device)
-        # tau_prev.require_grad = False
+
         if early_stop:
             early_stopper = EarlyStopper(patience=patience)
-        # from pyro.infer.autoguide import AutoNorma
+
+        # from pyro.infer.autoguide import AutoNormal
+        # self.guide = AutoNormal(self.model.model)
         svi = SVI(
-            self.model.model,
-            self.model.guide,
+            pyro.poutine.scale(self.model.model, 1 / self.n_train),
+            pyro.poutine.scale(self.model.guide, 1 / self.n_train),
             optimizer,
-            loss=TraceMeanField_ELBO(),
+            loss=Trace_ELBO(num_particles=num_particles),
         )
 
+        self.model.train()
+        iteration = 0
         pbar = tqdm(range(max_epochs), position=0, leave=True)
+
         for epoch in pbar:
             losses = []
             # optimizer.zero_grad()
-            for batch_idx, batch in enumerate(self.dataloader):
-                # batch = batch.to(device)
-                if self.n_batches == 1:
-                    batch_loss = svi.step(
-                        batch[0].to(device), batch[1].to(device), None
-                    )
-                else:
-                    batch_loss = svi.step(
-                        batch[0].to(device), batch[1].to(device), batch[2].to(device)
-                    )
-
+            for _, batch in enumerate(self.dataloader):
+                batch_loss = svi.step(
+                    batch["x"].to(device),
+                    batch["sgc_x"].to(device),
+                    batch["categorical_covariate_codes"].to(device),
+                    (
+                        batch["time_covariate_codes"].to(device)
+                        if self.n_time >= 2
+                        else None
+                    ),
+                    iteration,
+                    batch["sample_idx"],
+                    True,
+                )
                 losses.append(float(batch_loss))
+                iteration += 1
+                # print(f"Full time{end - start}
 
-            avg_loss = sum(losses) / self.n_cells
+            avg_loss = np.mean(losses)
+
             if np.isnan(avg_loss):
                 break
-            pbar.set_description(f"Loss:{avg_loss:.3f}")
+            pbar.set_description(f"Epoch Loss:{avg_loss:.3f}")
 
             if early_stop:
-                if early_stopper.early_stop(avg_loss):
-                    print("Early Stopping")
-                    break
+                if epoch > min_epochs:
+                    if early_stopper.early_stop(avg_loss):
+                        print("Early Stopping")
+                        break
 
-    def get_metrics(self, topk=10, layer=None, TGC=True):
+    def _kl_weight(self, iteration, iterations_to_anneal):
+        kl = self.min_kl + (
+            iteration / iterations_to_anneal * (self.max_kl - self.min_kl)
+        )
+        if kl > self.max_kl:
+            kl = self.max_kl
+        return kl
+
+    def get_metrics(self, topk=20, layer=None, TGC=True, pseudocount=0.1):
         """Get metrics
 
         Args:
@@ -279,51 +427,206 @@ class STAMP:
             _type_: _description_
         """
         adata = self.adata
-        beta = self.get_feature_by_topic()
+        beta = self.get_feature_by_topic(pseudocount=pseudocount)
         topic_prop = self.get_cell_by_topic()
         metrics = get_metrics(adata, beta, topic_prop, topk=topk, layer=layer, TGC=TGC)
 
         return metrics
 
-    def get_prior(self, device="cuda:0"):
-        self.model.to(device)
-        self.data.to(device)
-        prior_loc, prior_scale = self.model.get_prior(self.data.st_batch)
-        return prior_loc.detach().cpu().numpy(), prior_scale.detach().cpu().numpy()
-
-    def get_dispersion(self, device="cuda:0"):
-        model = self.model.model_params()
-        # model.eval()
-        model.to(device)
-        self.model.set_device(device)
-        self.model.eval()
-        # self.model.to(device)
-        self.data.to(device)
-
-        pred = self.model.predictive(num_samples=10)
-        if self.n_batches > 1:
-            pred = pred(
-                self.data.x, self.data.adj_t, self.data.sgc_x, self.data.st_batch
-            )
+    def get_param(self, name, distr="LN"):
+        loc = name + "_loc"
+        scale = name + "_scale"
+        param_loc = getattr(self.model, loc)
+        param_scale = getattr(self.model, scale)
+        if distr == "LN":
+            param = self.model.mean(param_loc, param_scale).detach().cpu().numpy()
+        elif distr == "Delta":
+            param = param_scale.detach().cpu().numpy()
         else:
-            pred = pred(self.data.x, self.data.adj_t, self.data.sgc_x)
-        # rate = self.model.feature("rate")
-        # rate = torch.exp(rate)
-        # rate = rate.detach().cpu().numpy()
-        rate = pred["disp"].mean(axis=0).detach().cpu().numpy()
-        # ads = pred["ads"].mean(axis=0).detach().cpu().numpy()
-        df = pd.DataFrame(rate, index=self.adata.var_names, columns=["disp"])
-        # df["ads"] = ads
+            param = param_loc.detach().cpu().numpy()
+        df = pd.DataFrame(param)
+        if df.shape[0] == self.n_features:
+            df.index = self.adata.var_names
+        if df.shape[1] == self.n_features:
+            df.columns = self.adata.var_names
+        if df.shape[0] == self.n_obs:
+            df.index = self.adata.obs_names
+        if df.shape[1] == self.n_obs:
+            df.columns = self.adata.obs_names
+        if df.shape[0] == self.n_topics:
+            df.index = [f"Topic{i}" for i in range(1, self.n_topics + 1)]
+        if df.shape[1] == self.n_topics:
+            df.columns = [f"Topic{i}" for i in range(1, self.n_topics + 1)]
         return df
 
+    def get_perplexity(
+        self, device=None, batch_size=None, dataset="test", num_particles=500
+    ):
+        if device is None:
+            device = self.device
+
+        if batch_size is None:
+            batch_size = self.batch_size
+
+        if dataset == "train":
+            dataset = self.train_dataset
+        else:
+            dataset = self.test_dataset
+
+        dataloader = DataLoader(
+            dataset, batch_size=batch_size, drop_last=False, shuffle=False
+        )
+
+        self.model = self.model.to("cuda:0")
+        loss = 0
+        with torch.no_grad():
+            for _, batch in enumerate(dataloader):
+                loss += TraceMeanField_ELBO(num_particles=num_particles).loss(
+                    self.model.model,
+                    self.model.guide,
+                    batch["x"].to(device),
+                    batch["sgc_x"].to(device),
+                    batch["categorical_covariate_codes"].to(device),
+                    (
+                        batch["time_covariate_codes"].to(device)
+                        if self.n_time >= 2
+                        else None
+                    ),
+                    1,
+                    batch["sample_idx"],
+                )
+            # loss += model_tr.log_prob_sum()
+        return loss
+
+    def return_imputed(self, batch_size=None, device="cpu"):
+        # if (self.continous_covariate_keys is None) and (
+        #     self.categorical_covariate_keys is None
+        # ):
+        #     dataset = TensorDataset(self.x, self.sgc_x)
+
+        # else:
+        if batch_size is None:
+            batch_size = self.batch_size
+        imputed = []
+
+        self.model = self.model.to(device)
+        # self.guide = guide.to(device)
+        (
+            z,
+            _,
+        ) = self.model.encoder(self.inputs["sgc_x"])
+        z = F.softmax(z, dim=1)
+        # z = self.z_topic_loc.to(device)
+        beta = self.beta_loc.to(device)
+        bg = self.bg_loc.to(device)
+
+        if self.n_batches >= 2:
+            batch_tau = F.sigmoid(self.batch_tau_loc).to(device)
+            batch_delta = self.batch_delta_loc.to(device)
+
+        imputed = torch.zeros((self.adata.X.shape), device=device)
+        ls = torch.sum(self.inputs["x"], -1, keepdim=True)
+
+        for i in range(self.n_batches):
+            if self.n_batches >= 2:
+                offset = batch_tau * batch_delta[i]
+            else:
+                offset = 0
+            indices = np.where(
+                self.inputs["categorical_covariate_codes"].cpu().numpy() == i
+            )[0]
+            imputed[indices] = z[indices] @ F.softmax(beta + bg + offset, dim=-1)
+
+        imputed = (ls * imputed).detach().cpu().numpy()
+        adata = self.adata.copy()
+        adata.X = imputed
+
+        return adata, imputed
+
+    def get_elbo(self, device=None, batch_size=None, dataset="test", num_particles=50):
+        if device is None:
+            device = self.device
+
+        if batch_size is None:
+            batch_size = self.batch_size
+
+        if dataset == "train":
+            dataset = self.train_dataset
+        else:
+            dataset = self.test_dataset
+
+        dataloader = DataLoader(
+            dataset, batch_size=batch_size, drop_last=False, shuffle=False
+        )
+        self.model = self.model.to(device)
+        # self.model.set_device(device)
+        loss = 0
+        with torch.no_grad():
+            for _, batch in enumerate(dataloader):
+                loss += TraceMeanField_ELBO(num_particles=num_particles).loss(
+                    self.model.model,
+                    self.model.guide,
+                    batch["x"].to(device),
+                    batch["sgc_x"].to(device),
+                    batch["categorical_covariate_codes"].to(device),
+                    (
+                        batch["time_covariate_codes"].to(device)
+                        if self.n_time >= 2
+                        else None
+                    ),
+                    1,
+                    batch["sample_idx"],
+                )
+            # loss += model_tr.log_prob_sum()
+        return loss
+
+    def get_deviance(self):
+        _, imputed = self.return_imputed()
+        return mean_poisson_deviance(
+            self.x.detach().cpu().numpy().ravel(), imputed.ravel()
+        )
+
+    def render_model(self):
+        if (self.continous_covariate_keys is None) and (
+            self.categorical_covariate_keys is None
+        ):
+            dataset = TensorDataset(self.x, self.sgc_x, self.adj_sparse)
+
+        else:
+            dataset = TensorDataset(
+                self.x, self.sgc_x, self.categorical_covariate_codes, self.adj_sparse
+            )
+
+        dataloader = DataLoader(dataset, batch_size=128, drop_last=False, shuffle=False)
+        batch_idx, batch = next(enumerate(dataloader))
+
+        data = (
+            batch[0].to(self.device),
+            batch[1].to(self.device),
+            None,
+            batch[2].to(self.device),
+        )
+        return pyro.render_model(self.model.model, data)
+        # if self.batch_key is None:
+
+    # @torch.inference_mode
+    # def get_dispersion(self, device="cuda:0:
+
+    #     # rate = self.model.feature("rate
+    #     # rate = torch.exp(rate)
+    #     # rate = rate.detach().cpu().numpy()
+    #     # rate = pred["disp"].mean(axis=0).detach().cpu().numpy()
+    #     # ads = pred["ads"].mean(axis=0).detach().cpu().numpy()
+    #     df = pd.DataFrame(rate, ex=self.adata.var_names, columns=["disp"])
+    #     # df["ads"] = ads
+    #     return df
     def save(self, path):
-        self.model.save(path)
+        pyro.get_param_store().save(path)
 
     def load(self, path):
-        self.model.load(path)
-        self.model.eval()
+        pyro.get_param_store().load(path)
 
-    def get_cell_by_topic(self, device="cpu"):
+    def get_cell_by_topic(self, adata=None, batch_size=None, device=None):
         """Get latent topics after training.
 
         Args:
@@ -332,36 +635,62 @@ class STAMP:
         Returns:
             _type_: A dataframe of cell by topics where each row sum to one.
         """
-        model = self.model.model_params()
-        model.eval()
-        model.to(device)
-        self.data.to(device)
+        if device is None:
+            device = self.device
+        if batch_size is None:
+            batch_size = self.batch_size
+        cell_topic = []
+        # if (self.continous_covariate_keys is None) and (
+        #     self.categorical_covariate_keys is None
+        # ):
+        #     dataset = TensorDataset(self.x, self.sgc_x)
 
-        with torch.no_grad():
-            # if self.batch_key is None:
-            x = self.data.x
-            if (self.continous_covariate_keys is None) and (
-                self.categorical_covariate_keys is None
-            ):
-                cell_topic = self.model.guide(x, self.data.sgc_x)
-            else:
-                cell_topic = self.model.guide(x, self.data.sgc_x, self.data.st_batch)
-
-            cell_topic = cell_topic.detach().cpu().numpy()
-            cell_topic = pd.DataFrame(
-                cell_topic,
-                columns=["Topic" + str(i) for i in range(1, self.n_topics + 1)],
+        # else:
+        if adata is None:
+            adata = self.adata
+        else:
+            self.setup(
+                adata,
+                self.layer,
+                self.categorical_covariate_keys,
+                self.continous_covariate_keys,
             )
-            cell_topic.set_index(self.adata.obs_names, inplace=True)
 
-            return cell_topic
+        dataloader = DataLoader(
+            self.dataset, batch_size=batch_size, drop_last=False, shuffle=False
+        )
+        self.model = self.model.to(device)
+        self.model.eval()
+        # self.guide = guide.to(device)
+        with torch.no_grad():
+            for _, batch in enumerate(dataloader):
+                cell_topic.append(
+                    self.model.get_cell_by_topic(
+                        batch["x"].to(device),
+                        batch["sgc_x"].to(device),
+                        batch["categorical_covariate_codes"].to(device),
+                        (
+                            batch["time_covariate_codes"].to(device)
+                            if self.n_time >= 2
+                            else None
+                        ),
+                        1,
+                        batch["sample_idx"],
+                    )
+                )
+            cell_topic = torch.cat(cell_topic, dim=0)
+        cell_topic = cell_topic.detach().cpu().numpy()
+        cell_topic = pd.DataFrame(
+            cell_topic,
+            columns=["Topic" + str(i) for i in range(1, self.n_topics + 1)],
+        )
+        cell_topic.set_index(adata.obs_names, inplace=True)
 
+        return cell_topic
+
+    @torch.inference_mode()
     def get_feature_by_topic(
-        self,
-        device="cpu",
-        num_samples=1000,
-        pct=0.5,
-        return_softmax=False,
+        self, device="cpu", return_softmax=False, transpose=False, pseudocount=0.1
     ):
         """Get the gene modules
 
@@ -378,98 +707,68 @@ class STAMP:
         # pseudcount of 0.5 aga aga
         # feature_topic = feature_topic.t()
         # Transform to torch log scale
-        self.model.to(device)
-        self.data.to(device)
 
         # feature_topic = self.model.feature_by_topic()
-        # feature_topic = feature_topic.to(device)
-        if pct == 0.5:
-            feature_topic = self.model.feature_by_topic(
-                return_scale=False, return_softmax=return_softmax
-            )
-            feature_topic = feature_topic.to(device)
+        # feature_topic = feature_topic.to(device)'
+        # ms = np.median(self.x.sum(axis=1)) #* ms
+        bg = self.model.get_bg()
+        bg = bg.detach().cpu()
+        if pseudocount > 0:
+            pseudocount = torch.quantile(bg, q=pseudocount)
         else:
-            feature_topic_loc, feature_topic_scale = self.model.feature_by_topic(
-                return_scale=True
+            pseudocount = 0
+        adj = torch.log(bg + pseudocount) - torch.log(bg)
+        # print(adj)
+        if self.n_time < 2:
+            feature_topic = (
+                self.model.feature_by_topic(
+                    return_scale=False, return_softmax=return_softmax
+                )
+                .detach()
+                .cpu()
             )
-            feature_topic = dist.Normal(
-                feature_topic_loc, torch.sqrt(torch.exp(feature_topic_scale))
+            feature_topic = feature_topic - adj
+            feature_topic = feature_topic.detach().cpu().numpy()
+            feature_topic = pd.DataFrame(
+                feature_topic.transpose(),
+                columns=["Topic" + str(i) for i in range(1, self.n_topics + 1)],
+                index=self.adata.var_names,
             )
-            feature_topic = feature_topic.sample((num_samples,)).kthvalue(
-                int(pct * num_samples), dim=0
-            )[0]
-            feature_topic = feature_topic.to(device)
-        # feature_topic = torch.sqrt(torch.exp(feature_topic_scale))
-        # if pseudocount > 0:
-        #     if self.n_batches > 1:
-        #         bg = self.model.get_bias().min(axis=0)[0]
-        #     else:
-        #         bg = self.model.get_bias()
-        #     amt = torch.log(bg.exp() + pseudocount) - bg
-        #     feature_topic = feature_topic.t() - amt
-        #     feature_topic = feature_topic.t()
-
-        feature_topic = feature_topic.detach().cpu().numpy()
-
-        feature_topic = feature_topic[:, : self.n_topics]
-        feature_topic = pd.DataFrame(
-            feature_topic,
-            columns=["Topic" + str(i) for i in range(1, self.n_topics + 1)],
-            index=self.adata.var_names,
-        )
-
+        else:
+            feature_topic = {}
+            # beta = torch.cat([self.beta_loc[..., None],
+            #                   self.beta_walk_loc], dim = -1)
+            # beta = self.beta_gp_loc
+            beta = self.model.get_cholesky(return_softmax=return_softmax)
+            # beta = (
+            #     beta
+            #     * self.model.get_lambda_tilde()
+            #     # + self.model.get_tide()
+            # ).cumsum(-1) * self.beta_temp
+            beta = beta.detach().cpu() - adj
+            for i in range(self.n_time):
+                df = pd.DataFrame(
+                    beta[:, :, i],
+                    index=["Topic" + str(i) for i in range(1, self.n_topics + 1)],
+                    columns=self.adata.var_names,
+                )
+                if transpose:
+                    df = df.transpose()
+                feature_topic[i] = df
+            feature_topic = pd.concat(feature_topic)
+            # feature_topic.rename_axis([" "gene"], inplace = True)
         return feature_topic
 
     def get_background(self):
-        background = self.model.get_bias().detach().cpu().numpy()
+        # background = self.model.get_bias().detach().cpu().numpy()
+        mean = self.init_bg_mean
+        var = self.init_bg_var
         background = pd.DataFrame(
-            background, index=self.adata.var_names, columns=["gene"]
+            np.vstack([mean, var]).transpose(),
+            index=self.adata.var_names,
+            columns=["mean", "var"],
         )
         return background
-
-    # def plot_qc(self, n_obs=1000, gene=None, device="cuda:0"):
-    #     self.model.eval()
-    #     self.model.to(device)
-    #     self.data.to(device)
-
-    #     if gene is None:
-    #         gene = self.adata.var_names
-    #     gene_index = np.where(self.adata.var_names == gene)[0]
-
-    #     x_plot = self.data.x.detach().cpu().numpy()
-    #     obs = random.sample(range(x_plot.shape[0]), n_obs)
-    #     x_plot = x_plot[obs, :]
-    #     x_plot = x_plot / x_plot.sum(axis=1, keepdims=True)
-
-    #     if self.batch_key is None:
-    #         w = self.get_feature_by_topic(return_softmax=True)
-    #         z = self.get_cell_by_topic()
-    #         w = w.to_numpy()
-    #         z = z.to_numpy()
-    #         z = z[obs, :]
-    #         mean = z @ w.transpose()
-    #         mean = mean
-    #     else:
-    #         w = self.get_feature_by_topic(return_softmax=True)
-    #         z = self.get_cell_by_topic()
-    #         w = w.to_numpy()
-    #         z = z.to_numpy()
-    #         z = z[obs, :]
-    #         ys = self.data.st_batch.detach().cpu().numpy()
-    #         ys = ys[obs, :]
-    #         z = np.hstack([z, ys])
-    #         mean = z @ w.transpose()
-    #         # if n_obs > x.shape[0]:
-    #     #     n_obs = x.shape[0]
-    #     x_plot = x_plot[:, gene_index].ravel()
-    #     y_plot = mean[:, gene_index].ravel()
-
-    #     plt.hist2d(
-    #         x_plot,
-    #         y_plot,
-    #         bins=100,
-    #         norm=matplotlib.colors.LogNorm(),
-    #     )
 
 
 class EarlyStopper:

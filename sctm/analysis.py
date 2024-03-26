@@ -1,5 +1,5 @@
-import gseapy as gp
 import discotoolkit as dt
+import gseapy as gp
 from joblib import Parallel, delayed
 
 
@@ -33,7 +33,6 @@ def get_topic_enrichr(beta, geneset, topics="all", organism="human", topn_genes=
 
 
 def get_topic_ora(beta, geneset, topics="all", topn_genes=20, n_jobs=20):
-
     if topics == "all":
         topics = beta.columns
     elif not isinstance(topics, list):
@@ -121,10 +120,9 @@ def get_topic_gsea(
     geneset,
     topics="all",
     geneset_size=[5, 500],
-    n_jobs=1,
     permutations=1000,
+    n_jobs=20,
 ):
-
     if topics == "all":
         topics = beta.columns
     elif not isinstance(topics, list):
@@ -159,7 +157,6 @@ def get_topic_gsea(
 
     # if topic not in gsea.keys():
     #     gsea[topic] = results
-
     gseas = {}
     for i in range(len(topics)):
         gseas[topics[i]] = gsea[i]
