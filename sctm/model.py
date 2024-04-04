@@ -1042,7 +1042,7 @@ class spatialLDAModel(PyroModule):
                             "beta_gp",
                             dist.MultivariateNormal(
                                 self.beta_gp_loc, scale_tril=self.beta_gp_scale
-                            ).to_event(0),
+                            ),
                         )
 
         if self.gene_distribution == "nb":

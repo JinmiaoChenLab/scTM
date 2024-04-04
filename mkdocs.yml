@@ -15,7 +15,7 @@ nav:
     - STAMP joint mouse brain Visium: notebooks/stamp/example2.ipynb
     - STAMP lung cancer SMI: notebooks/stamp/example3.ipynb
     - STAMP Multi Technolgy Mouse olfactory bulb: notebooks/stamp/example4.ipynb
-    - STAMP Multi Sample DLPFC: noteebooks/stamp/example6.ipynb
+    - STAMP Multi Sample DLPFC: notebooks/stamp/example6.ipynb
     - STAMP Time series Mouse embryo: notebooks/stamp/example5.ipynb
   # - 💡 Background:
   #   - Intro to Topquic Models: examples/intro_to_topicmodel.py
