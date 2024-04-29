@@ -7,7 +7,7 @@ import torch
 
 # from .data import choose_dataloader
 import torch.nn.functional as F
-from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO
+from pyro.infer import SVI, TraceMeanField_ELBO
 from pyro.optim import AdamW
 from sklearn.metrics import mean_poisson_deviance
 from sklearn.preprocessing import minmax_scale
@@ -258,6 +258,8 @@ class STAMP:
         max_epochs=800,
         min_epochs=100,
         learning_rate=0.01,
+        betas=(0.9, 0.999),
+        not_cov_epochs=5,
         device="cuda:0",
         batch_size=256,
         sampler="R",
@@ -266,7 +268,7 @@ class STAMP:
         min_kl=1,
         max_kl=1,
         early_stop=True,
-        patience=10,
+        patience=20,
         shuffle=True,
         num_particles=1,
     ):
@@ -276,7 +278,7 @@ class STAMP:
             max_epochs (int, optional): Maximum number of epochs to run.
                 Defaults to 2000.
             learning_rate (float, optional): Learning rate of AdamW optimi er.
-                Defaults to 0.01.
+                DefaRults to 0.01.
             device (str, optional): Which device to run model on. Use "cpu"
                 to run on cpu and cuda to run on gpu. Defaults to "cuda:0".
             weight_decay (float, optional): Weight decay of AdamW optimizer.
@@ -294,10 +296,6 @@ class STAMP:
         self.max_kl = max_kl
         self.batch_size = batch_size
 
-        # if min_epochs is None:
-        #     min_epochs = math.ceil(
-        #         self.iterations_to_anneal * batch_size / self.n_train
-        #     )
         if sampler == "R":
             self.dataloader = DataLoader(
                 self.train_dataset,
@@ -345,9 +343,9 @@ class STAMP:
             optim_args={
                 "lr": learning_rate,
                 "weight_decay": weight_decay,
-                "betas": (0.9, 0.999),
+                "betas": betas,
             },
-            clip_args={"clip_norm": 10},
+            clip_args={"clip_norm": 1},
         )
 
         self.device = device
@@ -356,7 +354,7 @@ class STAMP:
         avg_loss = np.Inf
 
         if early_stop:
-            early_stopper = EarlyStopper(patience=patience)
+            self.early_stopper = EarlyStopper(patience=patience)
 
         # from pyro.infer.autoguide import AutoNormal
         # self.guide = AutoNormal(self.model.model)
@@ -364,11 +362,15 @@ class STAMP:
             pyro.poutine.scale(self.model.model, 1 / self.n_train),
             pyro.poutine.scale(self.model.guide, 1 / self.n_train),
             optimizer,
-            loss=Trace_ELBO(num_particles=num_particles),
+            loss=TraceMeanField_ELBO(num_particles=num_particles),
         )
 
         self.model.train()
-        iteration = 0
+
+        not_cov = True
+        not_cov_epochs = not_cov_epochs
+        conv_tracker = ConvergenceTracker(not_cov_epochs)
+
         pbar = tqdm(range(max_epochs), position=0, leave=True)
 
         for epoch in pbar:
@@ -384,23 +386,24 @@ class STAMP:
                         if self.n_time >= 2
                         else None
                     ),
-                    iteration,
+                    not_cov,
                     batch["sample_idx"],
                     True,
                 )
                 losses.append(float(batch_loss))
-                iteration += 1
+                # iteration += 1
                 # print(f"Full time{end - start}
-
             avg_loss = np.mean(losses)
 
             if np.isnan(avg_loss):
                 break
             pbar.set_description(f"Epoch Loss:{avg_loss:.3f}")
 
+            not_cov = conv_tracker.convergence(avg_loss)
+
             if early_stop:
                 if epoch > min_epochs:
-                    if early_stopper.early_stop(avg_loss):
+                    if self.early_stopper.early_stop(avg_loss):
                         print("Early Stopping")
                         break
 
@@ -787,3 +790,30 @@ class EarlyStopper:
             if self.counter >= self.patience:
                 return True
         return False
+
+    def reset(self):
+        self.counter = 0
+        self.min_training_loss = np.Inf
+
+
+class ConvergenceTracker:
+    def __init__(self, patience=5, min_delta=0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.min_training_loss = np.inf
+
+    def convergence(self, training_loss):
+        if training_loss < self.min_training_loss:
+            self.min_training_loss = training_loss
+            self.counter = 0
+        elif training_loss > (self.min_training_loss + self.min_delta):
+            self.counter += 1
+            if self.counter >= self.patience:
+                self.min_training_loss = -np.Inf
+                return False
+        return True
+
+    def reset(self):
+        self.counter = 0
+        self.min_training_loss = np.Inf

@@ -11,6 +11,7 @@ from pyro.infer import Predictive
 from pyro.nn import PyroModule, PyroParam
 from torch.distributions.utils import broadcast_all
 
+# from .dist import GammaPoisson
 from .layers import MLPEncoderDirichlet, MLPEncoderMVN
 from .utils import rbf_kernel_batch
 
@@ -33,7 +34,6 @@ class spatialLDAModel(PyroModule):
         n_time,
         gp_inputs,
         rank,
-        # pseudo_inputs
     ):
         super().__init__()
 
@@ -48,7 +48,6 @@ class spatialLDAModel(PyroModule):
         self.n_time = n_time
         self.dropout = dropout
         self.rank = rank
-        self.q = (self.n_topics * (self.n_topics - 1)) // 2
 
         if self.enc_distribution == "mvn":
             self.encoder = MLPEncoderMVN(
@@ -71,53 +70,18 @@ class spatialLDAModel(PyroModule):
                 n_batches if n_batches > n_time else n_time,
             )
 
-        # if use_spatial_prior:
-        #     self.spatial_encoder = SpatialEncoder(
-        #         spatial_dim + self.n_batches, hidden_size, n_topics
-        #     )
-
-        # self.spatial_linear = nn.Linear(n_obs, n_topics, bias=False)
-        # nn.init.xavier_normal_(self.spatial_linear.weight)
-        # self.spatial_linear_var = nn.Linear(n_obs, n_topics, bias=False)
-        # nn.init.zeros_(self.spatial_linear_var.weight)
-
-        # if self.mode == "cell-batch":
-        # self.batchencoder = BatchEncoder(n_genes, n_layers, n_batches)
-
         if self.n_time >= 2:
             self.register_buffer("gp_inputs", gp_inputs, persistent=False)
-        #     beta_gp_tmp = gp_inputs[0, 0, :]
-        #     min = 1
-        #     for i in range(self.n_time - 1):
-        #         val = beta_gp_tmp[i + 1] - beta_gp_tmp[i]
-        #         if val < min:
-        #             min = val
-        #     self.gp_inputs_min = min
-        # bg_mean = init_bg_mean.detach().clone()
+
         self.register_buffer("init_bg_mean", init_bg_mean, persistent=False)
         self.register_buffer("alpha", torch.tensor(1 / self.n_topics), persistent=False)
-        # self.register_buffer("init_bg", init_bg_mean, persistent=False)
-        # Set up all guide parameters, automate this in futue
-        # Number of parameters needed to parametrise a correlation matrix.
 
-        # self.pseudo_inputs = PyroParam(pseudo_inputs)
-        self.caux_loc = PyroParam(
-            self._zeros_init((1)),
-        )
+        self.caux_loc = PyroParam(self._ones_init((1), multiplier=1))
         self.caux_scale = PyroParam(
             self._ones_init((1)),
             constraint=constraints.positive,
         )
 
-        # self.z_topic_lrd_loc = PyroParam(
-        #     self._zeros_init((self.n_topics, self.rank)),
-        # )
-        # self.z_topic_lrd_scale = PyroParam(
-        #     self._ones_init((self.n_topics, self.rank)),
-        #     constraint=constraints.positive,
-        # )
-
-        # if self.n_time < 2:
         self.z_topic_lr_loc = PyroParam(
             self._zeros_init((self.n_topics, self.rank)),
         )
@@ -126,34 +90,6 @@ class spatialLDAModel(PyroModule):
             constraint=constraints.positive,
         )
 
-        # else:
-        #     self.z_topic_lr_loc = PyroParam(
-        #         self._zeros_init((self.n_topics, self.rank, self.n_time)),
-        #     )
-        #     self.z_topic_lr_scale = PyroParam(
-        #         self._ones_init((self.n_topics, self.rank, self.n_time)),
-        #         constraint=constraints.positive,
-        #     )
-
-        # if self.n_time >= 2:
-        #     self.z_topic_chi_loc = PyroParam(
-        #         self._zeros_init((self.n_topics, self.n_time)),
-        #     )
-        #     self.z_topic_chi_scale = PyroParam(
-        #         self._ones_init((self.n_topics, self.n_time)),
-        #         constraint=constraints.positive,
-        #     )
-
-        # else:
-        # self.z_topic_chi_loc = PyroParam(
-        #     self._zeros_init((self.n_topics, 1)),
-        # )
-        # self.z_topic_chi_scale = PyroParam(
-        #     self._ones_init((self.n_topics, 1)),
-        #     constraint=constraints.positive,
-        # )
-
-        # if self.n_time < 2:
         self.z_topic_diag_loc = PyroParam(
             self._zeros_init((1)),
         )
@@ -245,7 +181,7 @@ class spatialLDAModel(PyroModule):
             )
 
         self.disp_loc = PyroParam(
-            self._zeros_init((self.n_genes)),
+            self._ones_init((self.n_genes)),
         )
         self.disp_scale = PyroParam(
             self._ones_init((self.n_genes)),
@@ -339,7 +275,6 @@ class spatialLDAModel(PyroModule):
         self.batches_plate = self.get_plate("batches")
         if self.n_time >= 2:
             self.time_plate = self.get_plate("time")
-        self.dropout = torch.nn.Dropout(dropout)
 
     def get_plate(self, name: str, n_samples=None, sample_idx=None, **kwargs):
         """Get the sampling plate.
@@ -366,12 +301,6 @@ class spatialLDAModel(PyroModule):
                 "subsample": sample_idx,
                 "dim": -1,
             },
-            # "sample2": {
-            #     "name": "sample2",
-            #     "size": n_samples,
-            #     "subsample": sample_idx,
-            #     "dim": -2,
-            # },
             "time": {"name": "time", "size": self.n_time, "dim": -1},
         }
 
@@ -384,29 +313,15 @@ class spatialLDAModel(PyroModule):
         return torch.zeros(shape, device=device)
 
     def _ones_init(self, shape, device="cpu", multiplier=0.1):
-        # print(device)
         return torch.ones(shape, device=device) * multiplier
 
-    # def SoftplusNormal(self, mu, sigma):
-    #     return dist.TransformedDistribution(
-    #         dist.Normal(mu, sigma), dist.transforms.SoftplusTransform()
-    #     )
-
-    # def _ar1_init(self, shape, device, multiplier=0.1):
-    #     # x = torch.eye(shape[-1], device=device)
-    #     x = self.precision_ar1_torch(N=shape[-1], rho=0.999, device=device)
-    #     x = x * multiplier
-    #     x = _precision_to_scale_tril(x)
-    #     x = x.expand(1, 1, shape[2], shape[3])
-    #     x = x.repeat(shape[0], shape[1], 1, 1)
-    #     return x
     def model(
         self,
         x,
         sgc_x,
         categorical_covariate_code=None,
         time_covariate_code=None,
-        iterations=1,
+        not_cov=True,
         sample_idx=None,
         mask=True,
     ):
@@ -422,8 +337,8 @@ class spatialLDAModel(PyroModule):
         caux = pyro.sample(
             "caux",
             dist.InverseGamma(
-                torch.ones(1, device=x.device),
-                torch.ones(1, device=x.device),
+                torch.ones(1, device=x.device) * 0.5,
+                torch.ones(1, device=x.device) * 0.5,
             ),
         )
 
@@ -442,7 +357,6 @@ class spatialLDAModel(PyroModule):
                             torch.ones_like(self.init_bg_mean),
                         ).to_event(1),
                     )
-
                 else:
                     bg = pyro.sample(
                         "bg",
@@ -451,7 +365,6 @@ class spatialLDAModel(PyroModule):
                             torch.ones_like(self.init_bg_mean),
                         ),
                     )
-
                 bg = bg + self.init_bg_mean
 
         with self.topics_plate:
@@ -499,7 +412,7 @@ class spatialLDAModel(PyroModule):
             (caux**2 * tau**2 * delta**2 * lambda_**2)
             / (caux**2 + tau**2 * delta**2 * lambda_**2)
         )
-        # lambda_tilde = lambda_ #* delta * tau
+        # lambda_tilde = lambda_ * delta * tau
 
         if self.n_time < 2:
             with self.topics_plate:
@@ -515,51 +428,17 @@ class spatialLDAModel(PyroModule):
                                 torch.ones(1, device=x.device),
                             ),
                         )
-                        beta = beta * lambda_tilde + bg
+                        beta = (
+                            beta * lambda_tilde + bg
+                        )  # + self.init_bg_mean#+ bg#* lambda_tilde# + bg
 
-        # Scaling term for scaled wishart distribution
-        # if self.n_time >= 2:
-        #     with self.topics_plate:
-        #         with self.time_plate:
-        #             z_topic_chi = pyro.sample(
-        #                 "z_topic_chi",
-        #                 dist.HalfCauchy(
-        #                     torch.ones(1, device=x.device),
-        #                 ),
-        #             )
-        #             # z_topic_chi = torch.ones_like(z_topic_chi)
-        # else:
-        # with self.topics_plate:
-        # z_topic_chi = pyro.sample(
-        #     "z_topic_chi",
-        #     dist.Chi2(
-        #         torch.ones(1, device=x.device) * 9,
-        #     ),
-        # )
-
-        # if self.n_time < 2:
         z_topic_diag = pyro.sample(
             "z_topic_diag",
             dist.HalfCauchy(
                 torch.ones(1, device=x.device),
             ),
-        )  # z_topic_chi = torch.ones_like(z_topic_chi)
-        # else:
-        #     with self.time_plate:
-        #         z_topic_diag = pyro.sample(
-        #             "z_topic_diag",
-        #             dist.HalfCauchy(
-        #                 torch.ones(1, device=x.device),
-        #             ),
-        #         )
-        # with self.topics_plate:
-        #     with self.ranks_plate:
-        #         z_topic_lrd = pyro.sample(
-        #             "z_topic_lrd",
-        #             dist.HalfCauchy(torch.ones(1, device=x.device)),
-        #         )
+        )
 
-        # if self.n_time <= 2:
         with self.topics_plate:
             with self.ranks_plate:
                 z_topic_lr = pyro.sample(
@@ -569,124 +448,21 @@ class spatialLDAModel(PyroModule):
                         torch.ones(1, device=x.device),
                     ).to_event(0),
                 )
-        # indices = torch.tril_indices(row=self.n_topics, col=self.n_topics, offset=-1)
-        # cov = torch.zeros((self.n_topics, self.n_topics), device=x.device)
-        # cov[indices[0], indices[1]] = z_topic_lr
-        # z_topic_lr = cov + torch.diag_embed(torch.sqrt(z_topic_chi.ravel()))
-
-        # else:
-        #     z_topic_cov = rbf_kernel_batch(
-        #         self.gp_inputs.expand(self.n_topics, self.rank, -1),
-        #         torch.ones(self.n_topics, self.rank, device=x.device) * 0.1,
-        #         torch.ones(self.n_topics, self.rank, device=x.device),
-        #     )
-
-        #     z_topic_lr = pyro.sample(
-        #         "z_topic_lr",
-        #         dist.Normal(
-        #             torch.zeros_like(self.z_topic_lr_loc),
-        #             torch.ones_like(self.z_topic_lr_loc),
-        #         ).to_event(1),
-        #     )
-
-        #     z_topic_chole = self.compute_cholesky_if_possible(z_topic_cov)
-        #     z_topic_lr = z_topic_chole.matmul(z_topic_lr.unsqueeze(-1)).squeeze(-1)
-
-        # z_topic_lr = z_topic_lr * z_topic_lrd
-        # z_topic_lr = pyro.sample(
-        #     "z_topic_lr",
-        #     dist.LKJCholesky(
-        #         # torch.zeros(1, device=x.device),
-        #         self.n_topics,
-        #         torch.ones(1, device=x.device) * 1000,
-        #     ),
-        # )
-        # print(z_topic_lr.shape)
-        # z_topic_lr = z_topic_lr.expand(-1, self.rank)
-        # print(z_topic_lr @ z_topic_lr.T)
-
-        # if self.n_time <= 2:
-        # if self.n_time < 2:
-        # precision = (
-        #     torch.diag_embed(z_topic_diag.ravel())
-        #     @ z_topic_lr
-        #     @ z_topic_lr.T
-        #     @ torch.diag_embed(z_topic_diag.ravel())
-        # )
-        # if iterations < 1000:
-        #     z_topic_lr = torch.zeros_like(z_topic_lr)
-
+        if not_cov:
+            z_topic_diag = torch.ones_like(z_topic_diag)
+            z_topic_lr = torch.zeros_like(z_topic_lr)
         # Converge to local minimum if correlation are learnt too quickly
         # Make this a hyperparameter next iteration
-        if iterations < 1000:
-            z_topic_lr = torch.zeros_like(z_topic_lr)
 
-        precision = z_topic_lr @ z_topic_lr.T + torch.diag_embed(
+        # if not_cov:
+        #     z_topic_lr = z_topic_lr = z_topic_lr * 0
+        #     z_topic_diag = torch.ones_like(z_topic_diag)
+        covariance = z_topic_lr @ z_topic_lr.T + torch.diag_embed(
             z_topic_diag.expand(self.n_topics)
         )
-        # else:
-        #     precision = torch.zeros(
-        #         self.n_time, self.n_topics, self.n_topics, device=x.device
-        #     )
-        #     for i in range(self.n_time):
-        #         precision[i] = (
-        #             torch.diag_embed(z_topic_diag[:, i])
-        #             @ z_topic_lr
-        #             @ z_topic_lr.T
-        #             @ torch.diag_embed(z_topic_diag[:, i])
-        #         )
-        #     precision = precision[time_covariate_code]
-
-        # + torch.diag_embed(z_topic_chi.ravel())
-        # )
-        # self.precision = precision
-        # precision = torch.diag(z_topic_chi.ravel()) @ z_topic_lr
-        # else:
-        #     z_topic_lr = z_topic_lr.permute(2, 0, 1)
-        #     precision = torch.bmm(
-        #         z_topic_lr, z_topic_lr.transpose(dim0=-2, dim1=-1)
-        #     ) + torch.diag_embed(z_topic_chi.permute(1, 0))
-        #     # precision = precision[None, ...].expand(
-        #     #     self.n_time, -1, -1
-        #     # ) + torch.diag_embed(z_topic_chi.permute(1, 0))
-
-        #     precision = precision[time_covariate_code]
-        # z_topic_lr = torch.bmm(
-        #     torch.diag_embed(z_topic_chi),
-        #     z_topic_lr[None, ...].expand(self.n_time, -1, -1),
-        # )
-        # precision = torch.bmm(z_topic_lr, torch.diag_embed(z_topic_chi))
-        # precision = precision[time_covariate_code]
         if self.n_time >= 2:
             # z_topic_time = torch.exp(z_topic_time)
             with self.topics_plate:
-                # with self.time_plate:
-                # z_topic_time = pyro.sample(
-                #     "z_topic_time",
-                #     dist.Normal(
-                #         torch.zeros_like(self.z_topic_time_loc),
-                #         torch.ones_like(self.z_topic_time_scale),
-                #     ),
-                # )
-
-                # z_topic_cov = rbf_kernel_batch(
-                #     self.gp_inputs.expand(self.n_topics, -1),
-                #     torch.ones(self.n_topics, device=x.device) * 0.1,
-                #     torch.ones(self.n_topics, device=x.device),
-                # )
-
-                # z_topic_chole = self.compute_cholesky_if_possible(z_topic_cov)
-                # z_topic_mu = (
-                #     z_topic_chole.matmul(z_topic_time.unsqueeze(-1)).squeeze(-1)
-                #     # + beta_gp_mu[..., None].expand(-1, -1, self.n_time)
-                # )
-                # z_topic_mu = z_topic_mu.permute(1, 0)[time_covariate_code]
-                # beta_gp_cov = rbf_kernel_batch(
-                #     self.gp_inputs.expand(self.n_topics, -1),
-                #     lambda_tilde**2,
-                #     beta_gp_lengthscale.expand(-1, self.n_genes),
-                # )
-
                 with poutine.mask(mask=mask):
                     with self.genes_plate:
                         # , torch.ones(1, device=x.device) * 5
@@ -702,33 +478,11 @@ class spatialLDAModel(PyroModule):
                         # beta_gp_lengthscale = 1 / beta_gp_lengthscale
                         beta_gp_lengthscale = torch.ones_like(beta_gp_lengthscale)
 
-                        beta_gp_mu = torch.zeros(
-                            self.n_topics, self.n_genes, device=x.device
-                        )
-
-                        beta_gp_mu = pyro.sample(
-                            "beta_gp_mu",
-                            dist.Cauchy(
-                                torch.zeros_like(beta_gp_mu),
-                                torch.ones_like(beta_gp_mu),
-                            ).to_event(0),
-                        )
-
-                        # identity = torch.eye(self.n_time, device = x.device)
-                        # beta_scale = pyro.sample(
-                        #     "beta_scale",
-                        #     dist.HalfCauchy(
-                        #         # torch.zeros_like(self.beta_loc),
-                        #         torch.ones_like(self.beta_scale),
-                        #     ),
-                        # )
-
                         beta_gp_cov = rbf_kernel_batch(
                             self.gp_inputs.expand(self.n_topics, self.n_genes, -1),
                             lambda_tilde**2,
                             beta_gp_lengthscale.expand(-1, self.n_genes),
                         )
-
                         # i = torch.arange(8)
                         # beta_gp_cov[...,i, i] = beta_gp_cov[...,i, i] + 1e-6
                         beta_gp_chole = self.compute_cholesky_if_possible(beta_gp_cov)
@@ -739,11 +493,9 @@ class spatialLDAModel(PyroModule):
                                 torch.ones_like(self.beta_gp_loc),
                             ).to_event(1),
                         )
-                        beta_gp = (
-                            beta_gp_chole.matmul(beta_gp.unsqueeze(-1)).squeeze(-1)
-                            # + beta_gp_mu[..., None].expand(-1, -1, self.n_time)
-                            + bg[None, ...].expand(self.n_topics, -1, self.n_time)
-                        )
+                        beta_gp = beta_gp_chole.matmul(beta_gp.unsqueeze(-1)).squeeze(
+                            -1
+                        ) + bg[None, ...].expand(self.n_topics, -1, self.n_time)
                         # print(bg[None, ...].expand(self.n_topics, -1, -1))
 
         if self.gene_distribution == "nb":
@@ -756,41 +508,17 @@ class spatialLDAModel(PyroModule):
                         ),
                     )
                     # disp = disp[categorical_covariate_code]
-
-        # pseudo_mu, pseudo_var = self.encoder(self.pseudo_inputs)
-
-        # comp = dist.Independent(
-        #     dist.Normal(
-        #         pseudo_mu,
-        #         pseudo_var,
-        #     ),
-        #     1,
-        # )
-
-        # mix = dist.Categorical(torch.ones(pseudo_mu.shape[0], device=x.device))
         with sample_plate:
             if self.enc_distribution == "mvn":
                 with poutine.scale(scale=kl_weight):
-                    # if self.n_time >= 2:
-                    # z_topic = pyro.sample(
-                    #     "z_topic",
-                    #     dist.Normal(z_topic_mu, torch.ones_like(z_topic_mu)).to_event(
-                    #         1
-                    #     ),
-                    # )
-                    # else:
-                    # z_topic_mu = pyro.param('z_topic_mu', torch.zeros(self.n_time, self.n_topics, device = x.device))
-                    # z_topic_mu = z_topic_mu[time_covariate_code]
                     z_topic = pyro.sample(
                         "z_topic",
                         dist.MultivariateNormal(
-                            torch.zeros_like(z_topic_mu), covariance_matrix=precision
+                            torch.zeros_like(z_topic_mu),
+                            covariance_matrix=covariance,
                         ).to_event(0),
                     )
-                    # z_topic = pyro.sample("z_topic", dist.MixtureSameFamily(mix, comp))
                     z = F.softmax(z_topic, dim=-1)
-                    # z = torch.exp(z_topic)
-                    # z = torch.exp(z_topic)
             else:
                 with poutine.scale(scale=kl_weight):
                     z_topic_concent = self.alpha.repeat(batch_size, self.n_topics)
@@ -821,10 +549,8 @@ class spatialLDAModel(PyroModule):
                 pyro.sample("obs", dist.Poisson(ls * mean + 1e-15).to_event(1), obs=x)
 
             elif self.gene_distribution == "nb":
+                # disp = torch.ones_like(disp) * 1e-3
                 inv_disp = 1 / disp**2
-                # inv_disp = torch.exp(log_inv_disp)
-                # inv_disp = inv_disp[categorical_covariate_code]
-                # inv_disp = inv_disp[categorical_covariate_code]
                 mean, inv_disp = broadcast_all(ls * mean + 1e-15, inv_disp)
                 pyro.sample(
                     "obs",
@@ -833,7 +559,7 @@ class spatialLDAModel(PyroModule):
                 )
                 # pyro.sample(
                 #     "obs",
-                #     dist.NegativeBinomial(inv_disp, mean / (mean + inv_disp)),
+                #     dist.NegativeBinomial(inv_disp, mean / (mean + inv_disp)).to_event(1),
                 #     obs=x,
                 # )
             else:
@@ -845,61 +571,19 @@ class spatialLDAModel(PyroModule):
         sgc_x=None,
         categorical_covariate_code=None,
         time_covariate_code=None,
-        iterations=1,
+        not_cov=True,
         sample_idx=None,
         mask=True,
     ):
         sample_plate = self.get_plate("sample", self.n_obs, sample_idx)
 
         kl_weight = 1
-        # omega_loc = pyro.param(
-        #     "omega_loc",
-        #     self._zeros_init(1, device=x.device),
-        # )
-        # omega_scale = pyro.param(
-        #     "omega_scale",
-        #     self._ones_init(1, device=x.device),
-        #     constraint=constraints.positive,
-        # )
-        # z_topic_chi = pyro.sample(
-        #     "omega",
-        #     dist.LogNormal(omega_loc, omega_scale).to_event(1),
-        # )
+
         pyro.sample("caux", dist.LogNormal(self.caux_loc, self.caux_scale))
 
         with poutine.mask(mask=mask):
             with self.genes_plate:
-                # # if self.n_time >= 2:
                 pyro.sample("delta", dist.LogNormal(self.delta_loc, self.delta_scale))
-
-        # if self.n_time >= 2:
-        #     # bg_delta_loc = pyro.param(
-        #     #     "bg_delta_loc",
-        #     #     self._zeros_init(self.n_genes, device=x.device),
-        #     # )
-        #     # bg_delta_scale = pyro.param(
-        #     #     "bg_delta_scale",
-        #     #     self._ones_init(self.n_genes, device=x.device),
-        #     #     constraint=constraints.positive,
-        #     # )
-        #     # pyro.sample(
-        #     #     "bg_delta", dist.LogNormal(bg_delta_loc, bg_delta_scale)
-        #     # )
-
-        #     zeros = torch.zeros_like(self.init_bg[:, None]).expand(
-        #         -1, self.n_time - 1
-        #     )
-        #     bg_loc_init = torch.cat([self.init_bg[:, None], zeros], dim=-1)
-        #     bg_loc = pyro.param(
-        #         "bg_loc",
-        #         bg_loc_init,
-        #     )
-        #     bg_scale = pyro.param(
-        #         "bg_scale",
-        #         self._ones_init((self.n_genes, self.n_time), device=x.device),
-        #         constraint=constraints.positive,
-        #     )
-        #     pyro.sample("bg", dist.Normal(bg_loc, bg_scale).to_event(1))
 
         with poutine.mask(mask=mask):
             with self.genes_plate:
@@ -918,7 +602,6 @@ class spatialLDAModel(PyroModule):
                     dist.LogNormal(self.lambda_loc, self.lambda_scale),
                 )
 
-        # with self.batches_plate:
         if self.n_batches >= 2:
             with self.topics_plate:
                 pyro.sample(
@@ -946,48 +629,35 @@ class spatialLDAModel(PyroModule):
                             dist.Normal(self.beta_loc, self.beta_scale),
                         )
 
-        # if self.n_time >= 2:
-        #     with self.topics_plate:
-        #         with self.time_plate:
-        #             pyro.sample(
-        #                 "z_topic_chi",
-        #                 dist.LogNormal(self.z_topic_chi_loc, self.z_topic_chi_scale),
-        #             )
-        # else:
-        # with self.topics_plate:
-        #     pyro.sample(
-        #         "z_topic_chi",
-        #         dist.LogNormal(self.z_topic_chi_loc, self.z_topic_chi_scale),
-        #     )
-        #     # if self.n_time < 2:
-        pyro.sample(
-            "z_topic_diag",
-            dist.LogNormal(self.z_topic_diag_loc, self.z_topic_diag_scale),
-        )
-        # else:
-        #     with self.time_plate:
-        #         pyro.sample(
-        #             "z_topic_diag",
-        #             dist.LogNormal(self.z_topic_diag_loc, self.z_topic_diag_scale),
-        #         )
+        if not_cov:
+            pyro.sample(
+                "z_topic_diag",
+                dist.LogNormal(
+                    self.z_topic_diag_loc.detach(), self.z_topic_diag_scale.detach()
+                ),
+            )
+        else:
+            pyro.sample(
+                "z_topic_diag",
+                dist.LogNormal(self.z_topic_diag_loc, self.z_topic_diag_scale),
+            )
 
         with self.topics_plate:
             with self.ranks_plate:
-                pyro.sample(
-                    "z_topic_lr",
-                    # dist.TransformedDistribution(
-                    dist.Normal(self.z_topic_lr_loc, self.z_topic_lr_scale).to_event(0),
-                    # dist.transforms.CorrCholeskyTransform(),
-                    # ),
-                )
-        # else:
-        #     pyro.sample(
-        #         "z_topic_lr",
-        #         # dist.TransformedDistribution(
-        #         dist.Normal(self.z_topic_lr_loc, self.z_topic_lr_scale).to_event(1),
-        #         # dist.transforms.CorrCholeskyTransform(),
-        #         # ),
-        #     )
+                if not_cov:
+                    pyro.sample(
+                        "z_topic_lr",
+                        dist.Normal(
+                            self.z_topic_lr_loc.detach(), self.z_topic_lr_scale.detach()
+                        ).to_event(0),
+                    )
+                else:
+                    pyro.sample(
+                        "z_topic_lr",
+                        dist.Normal(
+                            self.z_topic_lr_loc, self.z_topic_lr_scale
+                        ).to_event(0),
+                    )
 
         if self.n_time >= 2:
             with self.topics_plate:
@@ -1001,48 +671,14 @@ class spatialLDAModel(PyroModule):
                         dist.transforms.SigmoidTransform(),
                     ),
                 )
-                # with self.ranks_plate:
-                #     pyro.sample(
-                #         "z_topic_lr_timescale",
-                #         dist.LogNormal(
-                #             self.z_topic_lr_timescale_loc,
-                #             self.z_topic_lr_timescale_scale,
-                #         ),
-                #     )
-
-                # pyro.sample(
-                #     "z_topic_lr_lengthscale",
-                #     dist.TransformedDistribution(
-                #         dist.Normal(
-                #             self.z_topic_lr_lengthscale_loc,
-                #             self.z_topic_lr_lengthscale_scale,
-                #         ),
-                #         dist.transforms.SigmoidmTransform(),
-                #     ),
-                # )
-
-                # with self.time_plate:
-                #     # pyro.sample(
-                #     #     "z_topic_time",
-                #     #     dist.Normal(
-                #     #         self.z_topic_time_loc, self.z_topic_time_scale
-                #     #     ).to_event(0),
-                #     # )
 
                 with poutine.mask(mask=mask):
                     with self.genes_plate:
                         pyro.sample(
-                            "beta_gp_mu",
-                            dist.Normal(
-                                self.beta_gp_mu_loc, self.beta_gp_mu_scale
-                            ).to_event(0),
-                        )
-
-                        pyro.sample(
                             "beta_gp",
                             dist.MultivariateNormal(
                                 self.beta_gp_loc, scale_tril=self.beta_gp_scale
-                            ),
+                            ).to_event(0),
                         )
 
         if self.gene_distribution == "nb":
@@ -1050,39 +686,6 @@ class spatialLDAModel(PyroModule):
             with poutine.mask(mask=mask):
                 with self.genes_plate:
                     pyro.sample("disp", dist.LogNormal(self.disp_loc, self.disp_scale))
-
-        # if self.n_time >= 2:
-        #     # with self.topics_plate:
-        #     #     weights_var_loc = pyro.param(
-        #     #         "weights_var_loc",
-        #     #         self._zeros_init((self.n_topics, 1), device=x.device),
-        #     #     )
-        #     #     weights_var_scale = pyro.param(
-        #     #         "weights_var_scale",
-        #     #         self._ones_init((self.n_topics, 1), device=x.device),
-        #     #         constraint=constraints.positive,
-        #     #     )
-        #     #     pyro.sample(
-        #     #         "weights_var", dist.LogNormal(weights_var_loc, weights_var_scale)
-        #     #     )
-
-        #     #     weights_loc = pyro.param(
-        #     #         "weights_loc",
-        #     #         self._zeros_init((self.n_topics, self.n_time), device=x.device),
-        #     #     )
-        #     #     weights_scale = pyro.param(
-        #     #         "weights_scale",
-        #     #         self._ones_init(
-        #     #             (self.n_topics, self.n_time), device=x.device
-        #     #         ),
-        #     #         constraint=constraints.positive,
-        #     #     )
-        #     #     pyro.sample(
-        #     #         "weights",
-        #     #         dist.Normal(weights_loc, weights_scale).to_event(
-        #     #             0
-        #     #         ),
-        #     #     )
 
         with sample_plate:
             if self.enc_distribution == "mvn":
@@ -1095,9 +698,6 @@ class spatialLDAModel(PyroModule):
                     z_topic_loc, z_topic_scale = self.encoder(
                         sgc_x, categorical_covariate_code
                     )
-
-                # pyro.sample("ls", dist.Delta(ls_loc).to_event(1))
-                # z_loc, _, = self.encoder(x, None)
                 with poutine.scale(scale=kl_weight):
                     pyro.sample(
                         "z_topic",
@@ -1107,7 +707,6 @@ class spatialLDAModel(PyroModule):
                 z_topic_concent = self.encoder(sgc_x, categorical_covariate_code)
                 with poutine.scale(scale=kl_weight):
                     pyro.sample("z_topic", dist.Dirichlet(z_topic_concent))
-        # print(f"Guide time{end - start}
 
     def compute_cholesky_if_possible(self, x):
         try:
@@ -1145,59 +744,16 @@ class spatialLDAModel(PyroModule):
                     sgc_x, categorical_covariate_code
                 )
 
-            if self.training is False:
-                pass
-                # z_temp = self.z_temp[categorical_covariate_code]
-                # if self.n_time >= 2:
-                #     z_temp = self.z_temp[time_covariate_code]
-                #     z_time = self.z_topic_time_loc
-                #     z_time = z_time.permute(1, 0)
-                #     z_time = z_time[time_covariate_code]
-                # else:
-                #     z_time = 0
-                # weights = self.weights
-                # weights = weights[time_covariate_code]
-                # if self.n_time >= 2:
-                #     z_topic_time = self.z_topic_time_loc
-                #     z_topic_lr_timescale = self.mean(
-                #         self.z_topic_lr_timescale_loc,
-                #         self.z_topic_lr_timescale_scale,
-                #     )
-                #     # z_topic_lr_lengthscale = self.mean(
-                #     # self.z_topic_lr_lengthscale_loc,
-                #     # self.z_topic_lr_lengthscale_scale,
-                #     # )
-                #     z_topic_lr_lengthscale = self.z_topic_lr_lengthscale_loc
-                #     z_topic_lr_lengthscale = z_topic_lr_lengthscale.ravel()
-                #     z_topic_lr_lengthscale = F.sigmoid(z_topic_lr_lengthscale)
-                #     z_topic_lr_timescale = z_topic_lr_timescale.ravel()
-                #     z_topic_cov = rbf_kernel_batch(
-                #         self.gp_inputs.expand(self.n_topics, -1),
-                #         z_topic_lr_timescale**2,
-                #         z_topic_lr_lengthscale,
-                #     )
-                #     z_topic_cov += torch.eye(8, device=self.tau_loc.device) * 1e-4
-                #     z_topic_chole = torch.linalg.cholesky(z_topic_cov)
-                #     z_topic_time = z_topic_chole.matmul(
-                #         z_topic_time.unsqueeze(-1)
-                #     ).squeeze(-1)
-                #     z_topic_time = z_topic_time[:, time_covariate_code]
-                #     z_topic_time = z_topic_time.permute(1, 0)
+            # if self.n_time >= 2:
+            #     # z_topic_lr = self.z_topic_lr_loc
+            #     # z_topic_chi = self.mean(
+            #     #     self.z_topic_chi_loc, self.z_topic_chi_scale
+            #     # )
+            #     # z_topic_chi = z_topic_chi * z_topic_lr
+            #     # z_topic = z_topic_chi.matmul(z_topic.unsqueeze(-1)).squeeze(-1)
+            #     z_topic = z_topic
 
-            z_topic = (
-                z_topic_loc  # * self.mean(self.z_topic_chi_loc, self.z_topic_chi_scale)
-            )
-            if self.n_time >= 2:
-                # z_topic_lr = self.z_topic_lr_loc
-                # z_topic_chi = self.mean(
-                #     self.z_topic_chi_loc, self.z_topic_chi_scale
-                # )
-                # z_topic_chi = z_topic_chi * z_topic_lr
-                # z_topic = z_topic_chi.matmul(z_topic.unsqueeze(-1)).squeeze(-1)
-                z_topic = z_topic
-
-            z_loc = F.softmax(z_topic, dim=-1)
-
+            z_loc = F.softmax(z_topic_loc, dim=-1)
             return z_loc
 
     def feature_by_topic(self, return_scale, return_softmax=False):

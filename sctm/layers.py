@@ -49,28 +49,6 @@ class MLPEncoderDirichlet(nn.Module):
         nn.init.kaiming_normal_(self.mu_topic.weight, nonlinearity="relu")
 
 
-# class SpatialEncoder(nn.Module):
-#     def __init__(self, spatial_dim, hidden_size, n_topics):
-#         super().__init__()
-
-#         base = [
-#             nn.Linear(spatial_dim, hidden_size),
-#             nn.BatchNorm1d(hidden_size),
-#             nn.ReLU(),
-#             nn.Linear(hidden_size, n_topics),
-#         ]
-#         self.base = nn.Sequential(*base)
-#         self.norm_topic = nn.BatchNorm1d(n_topics, affine=False)
-
-#     def forward(self, x, y=None):
-#         x = torch.cat((x, y), dim=1)
-#         return self.norm_topic(self.base(x))
-
-#     def reset_parameters(self):
-#         nn.init.kaiming_normal_(self.base[0].weight, nonlinearity="relu")
-#         nn.init.kaiming_normal_(self.base[3].weight, nonlinearity="relu")
-
-
 class MLPEncoderMVN(nn.Module):
     def __init__(self, n_genes, hidden_size, n_topics, dropout, n_layers, n_batches):
         super().__init__()
@@ -92,23 +70,11 @@ class MLPEncoderMVN(nn.Module):
         self.norm_topic = nn.ModuleList(
             [nn.BatchNorm1d(n_topics) for i in range(n_batches)]
         )
-        # self.norm_topic1 = nn.ModuleList(
-        #     [nn.BatchNorm1d(n_topics) for i in range(n_batches)]
-        # )
+
         for norm in self.norm_topic:
             norm.weight.requires_grad = False
-        # for norm in self.norm_topic1:
-        #     norm.weight.requires_grad = False
 
-        # self.biases = nn.Parameter(torch.zeros(self.n_batches, self.n_topics))
         self.diag_topic = nn.Linear(hidden_size, n_topics)
-        # self.norm_diag = nn.BatchNorm1d(n_topics, affine = False)
-        # self.norm_diag.weight.requires_grad = False
-
-        # self.k = int(self.n_topics * (self.n_topics - 1) / 2)
-
-        # self.cov_factor = nn.Linear(hidden_size, self.k)
-        # self.norm_cov = nn.BatchNorm1d(self.k * n_topics, affine=False)
         self.reset_parameters()
 
     def forward(self, x, st_batch=None):  # , t=None):
@@ -135,7 +101,7 @@ class MLPEncoderMVN(nn.Module):
         else:
             mu_topic = self.norm_topic[0](mu_topic)
 
-        diag_topic = torch.exp(diag_topic) + 1e-5
+        diag_topic = F.softplus(diag_topic)
         # diag_topic = self.norm_diag(diag_topic)
         # cov_factor = self.cov_factor(x)
         # cov_factor = cov_factor.reshape((-1, self.n_topics, self.k))
@@ -153,11 +119,5 @@ class MLPEncoderMVN(nn.Module):
         nn.init.xavier_normal_(self.base[1].weight)
         nn.init.xavier_normal_(self.mu_topic.weight)
         nn.init.xavier_normal_(self.diag_topic.weight)
-        # nn.init.xavier_normal_(self.cov_factor.weight)
-        # nn.init.zeros_(self.ls_loc.weight)
-        # nn.init.zeros_(self.ls_scale.weight)
-        # nn.init.zeros_(self.cov_factor.bias)
         nn.init.zeros_(self.mu_topic.bias)
         nn.init.zeros_(self.diag_topic.bias)
-        # nn.init.zeros_(self.ls_loc.bias)
-        # nn.init.zeros_(self.ls_scale.bias)
