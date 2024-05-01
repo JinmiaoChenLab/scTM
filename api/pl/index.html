@@ -1,0 +1,1875 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="The documentation for the scTM software library.">
+      
+      
+      
+        <link rel="canonical" href="https://jinmiaochenlab.github.io/scTM/api/pl/">
+      
+      
+        <link rel="prev" href="../analysis/">
+      
+      
+        <link rel="next" href="../pp/">
+      
+      <link rel="icon" href="../../_static/favicon.ico">
+      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.18">
+    
+    
+      
+        <title>pl - scTM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.26e3688c.min.css">
+      
+      
+
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#sctm.pl" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="scTM" class="md-header__button md-logo" aria-label="scTM" data-md-component="logo">
+      
+  <img src="../../_static/favicon.ico" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            scTM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              pl
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/JinmiaoChenLab/scTM" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    scTM
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="scTM" class="md-nav__button md-logo" aria-label="scTM" data-md-component="logo">
+      
+  <img src="../../_static/favicon.ico" alt="logo">
+
+    </a>
+    scTM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/JinmiaoChenLab/scTM" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    scTM
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        🏡 Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          Getting started
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Getting started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        🛠️ Installation
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          🎓 Tutorials
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          🎓 Tutorials
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/stamp/Simulation/" class="md-nav__link">
+        STAMP simulation example
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/stamp/example1/" class="md-nav__link">
+        STAMP breast cancer and cell/phenotype inference with GSEA
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/stamp/example2/" class="md-nav__link">
+        STAMP joint mouse brain Visium
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/stamp/example3/" class="md-nav__link">
+        STAMP lung cancer SMI with DISCO
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/stamp/example4/" class="md-nav__link">
+        STAMP Multi Technolgy Mouse olfactory bulb
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/stamp/example6/" class="md-nav__link">
+        STAMP Multi Sample DLPFC
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/stamp/example5/" class="md-nav__link">
+        STAMP Time series Mouse embryo
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+          📕 Reference
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          📕 Reference
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" checked>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+          sctm
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="true">
+        <label class="md-nav__title" for="__nav_4_1">
+          <span class="md-nav__icon md-icon"></span>
+          sctm
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../analysis/" class="md-nav__link">
+        analysis
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          pl
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        pl
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl" class="md-nav__link">
+    sctm.pl
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.heatmap" class="md-nav__link">
+    heatmap()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.matrixplot" class="md-nav__link">
+    matrixplot()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.trackplot" class="md-nav__link">
+    trackplot()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.spatialpie" class="md-nav__link">
+    spatialpie()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.get_rgb_function" class="md-nav__link">
+    get_rgb_function()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.rgb_to_ryb" class="md-nav__link">
+    rgb_to_ryb()
+  </a>
+  
+    <nav class="md-nav" aria-label="rgb_to_ryb()">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sctm.pl.rgb_to_ryb--parameters" class="md-nav__link">
+    Parameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sctm.pl.rgb_to_ryb--returns" class="md-nav__link">
+    Returns
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.ryb_to_rgb" class="md-nav__link">
+    ryb_to_rgb()
+  </a>
+  
+    <nav class="md-nav" aria-label="ryb_to_rgb()">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sctm.pl.ryb_to_rgb--parameters" class="md-nav__link">
+    Parameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sctm.pl.ryb_to_rgb--returns" class="md-nav__link">
+    Returns
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.plot_spatial" class="md-nav__link">
+    plot_spatial()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.spatial" class="md-nav__link">
+    spatial()
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pp/" class="md-nav__link">
+        pp
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../stamp/" class="md-nav__link">
+        stamp
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl" class="md-nav__link">
+    sctm.pl
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.heatmap" class="md-nav__link">
+    heatmap()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.matrixplot" class="md-nav__link">
+    matrixplot()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.trackplot" class="md-nav__link">
+    trackplot()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.spatialpie" class="md-nav__link">
+    spatialpie()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.get_rgb_function" class="md-nav__link">
+    get_rgb_function()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.rgb_to_ryb" class="md-nav__link">
+    rgb_to_ryb()
+  </a>
+  
+    <nav class="md-nav" aria-label="rgb_to_ryb()">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sctm.pl.rgb_to_ryb--parameters" class="md-nav__link">
+    Parameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sctm.pl.rgb_to_ryb--returns" class="md-nav__link">
+    Returns
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.ryb_to_rgb" class="md-nav__link">
+    ryb_to_rgb()
+  </a>
+  
+    <nav class="md-nav" aria-label="ryb_to_rgb()">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sctm.pl.ryb_to_rgb--parameters" class="md-nav__link">
+    Parameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sctm.pl.ryb_to_rgb--returns" class="md-nav__link">
+    Returns
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.plot_spatial" class="md-nav__link">
+    plot_spatial()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sctm.pl.spatial" class="md-nav__link">
+    spatial()
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  <h1>pl</h1>
+
+<div class="doc doc-object doc-module">
+
+
+<a id="sctm.pl"></a>
+  <div class="doc doc-contents first">
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h4 id="sctm.pl.heatmap" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">heatmap</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">topic_prop</span><span class="p">,</span> <span class="n">groupby</span><span class="p">,</span> <span class="n">dendrogram</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">swap_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">save</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+
+</h4>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Creates a heatmap of cell(grouped by groupby) by topics</p>
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>adata</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Adata object</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>topic_prop</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Topic proportions returned by STAMP</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>groupby</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Column in adata object to arrange the cells</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>figsize</code></td>
+          <td>
+                <code>tuple</code>
+          </td>
+          <td><p>Figsize. Defaults to (10, 5).</p></td>
+          <td>
+                <code>(10, 5)</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>dendrogram</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p>Whether to cluster. Defaults to False.</p></td>
+          <td>
+                <code>False</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>swap_axes</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p>Whether to swap x and y axis. Defaults to True.</p></td>
+          <td>
+                <code>True</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>cmap</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>What matplotib cmap to use. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>save</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Whether to save the object. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h4 id="sctm.pl.matrixplot" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">matrixplot</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">topic_prop</span><span class="p">,</span> <span class="n">groupby</span><span class="p">,</span> <span class="n">dendrogram</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">swap_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">save</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+
+</h4>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Creates a matrixplot of cell(grouped by groupby) by topics</p>
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>adata</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Adata object</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>topic_prop</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Topic proportions returned by STAMP</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>groupby</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Column in adata object to arrange the cells</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>figsize</code></td>
+          <td>
+                <code>tuple</code>
+          </td>
+          <td><p>Figsize. Defaults to (10, 5).</p></td>
+          <td>
+                <code>(10, 5)</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>dendrogram</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p>Whether to cluster. Defaults to False.</p></td>
+          <td>
+                <code>False</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>swap_axes</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p>Whether to swap x and y axis. Defaults to True.</p></td>
+          <td>
+                <code>True</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>cmap</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>What matplotib cmap to use. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>save</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Whether to save the object. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h4 id="sctm.pl.trackplot" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">trackplot</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">topic_prop</span><span class="p">,</span> <span class="n">groupby</span><span class="p">,</span> <span class="n">dendrogram</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">swap_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">save</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+
+</h4>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Creates a trackplot of cell(grouped by groupby) by topics</p>
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>adata</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Adata object</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>topic_prop</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Topic proportions returned by STAMP</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>groupby</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Column in adata object to arrange the cells</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>figsize</code></td>
+          <td>
+                <code>tuple</code>
+          </td>
+          <td><p>Figsize. Defaults to (10, 5).</p></td>
+          <td>
+                <code>(10, 5)</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>dendrogram</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p>Whether to cluster. Defaults to False.</p></td>
+          <td>
+                <code>False</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>swap_axes</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p>Whether to swap x and y axis. Defaults to True.</p></td>
+          <td>
+                <code>True</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>cmap</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>What matplotib cmap to use. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>save</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Whether to save the object. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h4 id="sctm.pl.spatialpie" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">spatialpie</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">color</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">basis</span><span class="o">=</span><span class="s1">&#39;spatial&#39;</span><span class="p">,</span> <span class="n">img</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">img_key</span><span class="o">=</span><span class="n">_empty</span><span class="p">,</span> <span class="n">library_id</span><span class="o">=</span><span class="n">_empty</span><span class="p">,</span> <span class="n">crop_coord</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">alpha_img</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">bw</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">scale_factor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">spot_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">na_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_fig</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;tab20&#39;</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h4>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Creates a spatialpie plot of object. Very ugly according to twitter.</p>
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>adata</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Adata object</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>topic_prop</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Return</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>basis</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td><p>Basis to use. Defaults to "spatial".</p></td>
+          <td>
+                <code>&#39;spatial&#39;</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>img</code></td>
+          <td>
+                <code><span title="typing.Union">Union</span>[<span title="numpy">np</span>.<span title="numpy.ndarray">ndarray</span>, None]</code>
+          </td>
+          <td><p><em>description</em>. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>img_key</code></td>
+          <td>
+                <code><span title="typing.Union">Union</span>[str, None, <span title="scanpy._utils.Empty">Empty</span>]</code>
+          </td>
+          <td><p><em>description</em>. Defaults to _empty.</p></td>
+          <td>
+                <code>_empty</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>library_id</code></td>
+          <td>
+                <code><span title="typing.Union">Union</span>[str, <span title="scanpy._utils.Empty">Empty</span>]</code>
+          </td>
+          <td><p><em>description</em>. Defaults to _empty.</p></td>
+          <td>
+                <code>_empty</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>crop_coord</code></td>
+          <td>
+                <code><span title="typing.Tuple">Tuple</span>[int, int, int, int]</code>
+          </td>
+          <td><p><em>description</em>.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>alpha_img</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td><p><em>description</em>. Defaults to 1.0.</p></td>
+          <td>
+                <code>1.0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>bw</code></td>
+          <td>
+                <code><span title="typing.Optional">Optional</span>[bool]</code>
+          </td>
+          <td><p><em>description</em>. Defaults to False.</p></td>
+          <td>
+                <code>False</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>frameon</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p><em>description</em>. Defaults to False.</p></td>
+          <td>
+                <code>False</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>size</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td><p><em>description</em>. Defaults to 1.0.</p></td>
+          <td>
+                <code>1.0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>scale_factor</code></td>
+          <td>
+                <code><span title="typing.Optional">Optional</span>[float]</code>
+          </td>
+          <td><p><em>description</em>. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>spot_size</code></td>
+          <td>
+                <code><span title="typing.Optional">Optional</span>[float]</code>
+          </td>
+          <td><p><em>description</em>. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>na_color</code></td>
+          <td>
+                <code><span title="typing.Optional">Optional</span>[<span title="scanpy.pl._utils.ColorLike">ColorLike</span>]</code>
+          </td>
+          <td><p><em>description</em>. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>show</code></td>
+          <td>
+                <code><span title="typing.Optional">Optional</span>[bool]</code>
+          </td>
+          <td><p><em>description</em>. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>return_fig</code></td>
+          <td>
+                <code><span title="typing.Optional">Optional</span>[bool]</code>
+          </td>
+          <td><p><em>description</em>. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>cmap</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td><p><em>description</em>. Defaults to "tab20".</p></td>
+          <td>
+                <code>&#39;tab20&#39;</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>legend</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p><em>description</em>. Defaults to True.</p></td>
+          <td>
+                <code>True</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>figsize</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p><em>description</em>. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>title</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p><em>description</em>. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+  <p><strong>Returns:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td>
+                <code><span title="typing.Union">Union</span>[<span title="matplotlib.axes.Axes">Axes</span>, <span title="typing.List">List</span>[<span title="matplotlib.axes.Axes">Axes</span>], None]</code>
+          </td>
+          <td><p>Union[Axes, List[Axes], None]: <em>description</em></p></td>
+        </tr>
+    </tbody>
+  </table>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h4 id="sctm.pl.get_rgb_function" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_rgb_function</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="n">min_value</span><span class="p">,</span> <span class="n">max_value</span><span class="p">)</span></code>
+
+</h4>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Generate a function to map continous values to RGB values using colormap
+between min_value &amp; max_value.</p>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h4 id="sctm.pl.rgb_to_ryb" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">rgb_to_ryb</span><span class="p">(</span><span class="n">rgb</span><span class="p">)</span></code>
+
+</h4>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Converts colours from RGB colorspace to RYB</p>
+<h6 id="sctm.pl.rgb_to_ryb--parameters">Parameters</h6>
+<p>rgb
+    numpy array Nx3</p>
+<h6 id="sctm.pl.rgb_to_ryb--returns">Returns</h6>
+<p>Numpy array Nx3</p>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h4 id="sctm.pl.ryb_to_rgb" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">ryb_to_rgb</span><span class="p">(</span><span class="n">ryb</span><span class="p">)</span></code>
+
+</h4>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Converts colours from RYB colorspace to RGB</p>
+<h6 id="sctm.pl.ryb_to_rgb--parameters">Parameters</h6>
+<p>ryb
+    numpy array Nx3</p>
+<h6 id="sctm.pl.ryb_to_rgb--returns">Returns</h6>
+<p>Numpy array Nx3</p>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h4 id="sctm.pl.plot_spatial" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">plot_spatial</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">topic_prop</span><span class="p">,</span> <span class="n">basis</span><span class="o">=</span><span class="s1">&#39;spatial&#39;</span><span class="p">,</span> <span class="n">bw</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">img</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">library_id</span><span class="o">=</span><span class="n">_empty</span><span class="p">,</span> <span class="n">crop_coord</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">img_key</span><span class="o">=</span><span class="n">_empty</span><span class="p">,</span> <span class="n">spot_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">na_color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale_factor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale_default</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">show_img</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">display_zeros</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+
+</h4>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Plot taken from cell2location at https://github.com/BayraktarLab/cell2location.
+Able to display zeros and also on umap through the basis function</p>
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>adata</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Adata object with spatial coordinates in adata.obsm['spatial']</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>topic_prop</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Topic proportion obtained from STAMP.</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>basis</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td><p>Which basis to plot in adata.obsm. Defaults to "spatial".</p></td>
+          <td>
+                <code>&#39;spatial&#39;</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>bw</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p>Defaults to False.</p></td>
+          <td>
+                <code>False</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>img</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>library_id</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p><em>description</em>. Defaults to _empty.</p></td>
+          <td>
+                <code>_empty</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>crop_coord</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p><em>description</em>. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>img_key</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p><em>description</em>. Defaults to _empty.</p></td>
+          <td>
+                <code>_empty</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>spot_size</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p><em>description</em>. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>na_color</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p><em>description</em>. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>scale_factor</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p><em>description</em>. Defaults to None.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>scale_default</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td><p><em>description</em>. Defaults to 0.5.</p></td>
+          <td>
+                <code>0.5</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>show_img</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p>Whether to display spatial image. Sets to false</p></td>
+          <td>
+                <code>True</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>display_zeros</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p>Whether to display cells that have low counts</p></td>
+          <td>
+                <code>False</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>figsize</code></td>
+          <td>
+                <code>tuple</code>
+          </td>
+          <td><p>Figsize of image. Defaults to (10, 10).</p></td>
+          <td>
+                <code>(10, 10)</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+  <p><strong>Returns:</strong></p>
+  <table>
+    <thead>
+      <tr>
+<th>Name</th>        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+<td><code>_type_</code></td>          <td>
+          </td>
+          <td><p>Function taken from cell2location at</p></td>
+        </tr>
+        <tr>
+<td><code>https</code></td>          <td>
+          </td>
+          <td><p>//cell2location.readthedocs.io/en/latest/_modules/cell2location/plt/plot_spatial.html#plot_spatial.</p></td>
+        </tr>
+        <tr>
+<td></td>          <td>
+          </td>
+          <td><p>Able to plot both on spatial and umap coordinates. Still very raw.</p></td>
+        </tr>
+    </tbody>
+  </table>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h4 id="sctm.pl.spatial" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">spatial</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">frameon</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">wspace</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">colorbar_loc</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">basis</span><span class="o">=</span><span class="s1">&#39;spatial&#39;</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+
+</h4>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>A faster simple function that uses sc.pl.embedding to plot for non-visium data
+so it dont take too long. ~sleep. Very inflexible.</p>
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>adata</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Annotated data matrix.</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>color</code></td>
+          <td>
+                <code>_type_</code>
+          </td>
+          <td><p>Keys for annotations of observations/cells or variables/genes</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>size</code></td>
+          <td>
+                <code>int</code>
+          </td>
+          <td><p>size of spots. Defaults to 1.</p></td>
+          <td>
+                <code>1</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>basis</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td><p>basis in obsm. Defaults to "spatial".</p></td>
+          <td>
+                <code>&#39;spatial&#39;</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>vmax</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td><p>The value representing the upper limit of the color scale. Defaults to "p99".</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>show</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p>Show the plot, do not return axis. Defaults to True.</p></td>
+          <td>
+                <code>True</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+  <p><strong>Returns:</strong></p>
+  <table>
+    <thead>
+      <tr>
+<th>Name</th>        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+<td><code>_type_</code></td>          <td>
+          </td>
+          <td><p>A plot</p></td>
+        </tr>
+    </tbody>
+  </table>
+
+  </div>
+
+</div>
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+            Back to top
+          </button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "content.code.copy", "search.suggest", "search.highlight", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.74e28a9f.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.220ee61c.min.js"></script>
+      
+    
+  </body>
+</html>
