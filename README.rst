@@ -47,15 +47,20 @@ or
 
 Basic Usage
 -----------
-Check out our usage of STAMP in the documentation with a simulated data at https://jinmiaochenlab.github.io/scTM/notebooks/stamp/simulation. |
-The simulated data can be found at data/simulation.h5ad. |
+Check out our usage of STAMP in the documentation with a simulated data at https://jinmiaochenlab.github.io/scTM/notebooks/stamp/simulation.
+
+The simulated data can be found at data/simulation.h5ad.
+
 For more advanced usage please check the examples in our detailed tutorials.
 
 Tested with
 -----------
 python == 3.8
+
 numpy == 1.24.4
+
 numba == 0.57.1
+
 torch == 2.0.3
 
 Credits
