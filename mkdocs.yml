@@ -11,9 +11,10 @@ nav:
   - Getting started:
       - 🛠️ Installation: installation.md
   - 🎓 Tutorials:
-    - STAMP breast cancer and cell/phenotype inference with DISCO signatures: notebooks/stamp/example1.ipynb
+    - STAMP simulation example: notebooks/stamp/simulation.ipynb
+    - STAMP breast cancer and cell/phenotype inference with GSEA: notebooks/stamp/example1.ipynb
     - STAMP joint mouse brain Visium: notebooks/stamp/example2.ipynb
-    - STAMP lung cancer SMI: notebooks/stamp/example3.ipynb
+    - STAMP lung cancer SMI with DISCO: notebooks/stamp/example3.ipynb
     - STAMP Multi Technolgy Mouse olfactory bulb: notebooks/stamp/example4.ipynb
     - STAMP Multi Sample DLPFC: notebooks/stamp/example6.ipynb
     - STAMP Time series Mouse embryo: notebooks/stamp/example5.ipynb
