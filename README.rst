@@ -47,9 +47,9 @@ or
 
 Basic Usage
 -----------
-Check out our usage of STAMP in the documentation with a simulated data at https://jinmiaochenlab.github.io/scTM/notebooks/stamp/simulation.
-| The simulated data can be found at data/simulation.h5ad.
-| For more advanced usage please check the examples in our detailed tutorials.
+Check out our usage of STAMP in the documentation with a simulated data at https://jinmiaochenlab.github.io/scTM/notebooks/stamp/simulation. |
+The simulated data can be found at data/simulation.h5ad. |
+For more advanced usage please check the examples in our detailed tutorials.
 
 Tested with
 -----------
