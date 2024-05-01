@@ -11,7 +11,7 @@ nav:
   - Getting started:
       - 🛠️ Installation: installation.md
   - 🎓 Tutorials:
-    - STAMP simulation example: notebooks/stamp/simulation.ipynb
+    - STAMP simulation example: notebooks/stamp/Simulation.ipynb
     - STAMP breast cancer and cell/phenotype inference with GSEA: notebooks/stamp/example1.ipynb
     - STAMP joint mouse brain Visium: notebooks/stamp/example2.ipynb
     - STAMP lung cancer SMI with DISCO: notebooks/stamp/example3.ipynb
